@@ -32,7 +32,7 @@ export function NavProjects({
               <a
                 href={item.url}
                 className={`space-x-2 relative inline-flex items-center justify-start !py-5 mb-2 overflow-hidden text-sm font-medium text-gray-500 rounded-lg ${
-                  (param.get("tab") || "product") === item.tab
+                  (param.get("tab") || "reading") === item.tab
                     ? "bg-indigo-100 hover:bg-indigo-100 text-indigo-900 hover:text-indigo-900 font-semibold"
                     : ""
                 }`}

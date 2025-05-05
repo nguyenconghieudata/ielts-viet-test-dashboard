@@ -31,7 +31,7 @@ export default function LoginClient() {
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
-    if (username === "inanhtructuyen" && password === "Iatt@6789") {
+    if (username === "ieltstest" && password === "It@6789") {
       setTimeout(() => {
         Cookies.set("isLogin", "true", { expires: 7 });
         window.location.href = ROUTES.HOME;
@@ -53,7 +53,7 @@ export default function LoginClient() {
           <div className="mb-4">
             <div className="flex justify-start items-center gap-4">
               <Image src={IMAGES.LOGO} alt="Logo" width={40} height={40} />
-              <h1 className="text-2xl font-bold">In Ảnh Trực Tuyến</h1>
+              <h1 className="text-2xl font-bold">IELTS Test</h1>
             </div>
           </div>
           <div className="mt-4">

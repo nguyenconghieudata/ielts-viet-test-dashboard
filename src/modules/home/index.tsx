@@ -26,13 +26,13 @@ export default function HomeClient() {
 
   const renderTab = (tab: string) => {
     switch (tab) {
-      case "product":
+      case "reading":
         return <Product />;
-      case "order":
+      case "listening":
         return <Order />;
-      case "blog":
+      case "writing":
         return <Blog />;
-      case "customer":
+      case "full-test":
         return <Customer />;
       default:
         return <Product />;
@@ -41,13 +41,13 @@ export default function HomeClient() {
 
   const renderBreadcrumb = (tab: string) => {
     switch (tab) {
-      case "product":
+      case "reading":
         return "Sản Phẩm";
-      case "order":
+      case "listening":
         return "Đơn Hàng";
-      case "blog":
+      case "writing":
         return "Bài Viết";
-      case "customer":
+      case "full-test":
         return "Khách Hàng";
       default:
         return "Sản Phẩm";
@@ -73,7 +73,7 @@ export default function HomeClient() {
                 <BreadcrumbItem>
                   <BreadcrumbPage>
                     <span className="text-[16px]">
-                      {renderBreadcrumb(param.get("tab") || "product")}
+                      {renderBreadcrumb(param.get("tab") || "reading")}
                     </span>
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -83,7 +83,7 @@ export default function HomeClient() {
         </header>
         <div className="w-full h-[1.5px] bg-black opacity-10"></div>
         <div className="flex flex-1 flex-col">
-          {renderTab(param.get("tab") || "product")}
+          {renderTab(param.get("tab") || "reading")}
         </div>
       </SidebarInset>
     </SidebarProvider>

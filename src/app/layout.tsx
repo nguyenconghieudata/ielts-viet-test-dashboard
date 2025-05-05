@@ -8,8 +8,8 @@ import NotFoundPage from "@/modules/not-found";
 const font = Plus_Jakarta_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "QUẢN TRỊ HỆ THỐNG",
-  description: "IN ẢNH TRỰC TUYẾN",
+  title: "IELTS Test",
+  description: "IELTS Test",
 };
 
 export default function RootLayout({
