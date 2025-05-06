@@ -8,7 +8,7 @@ import { OrderService } from "@/services/order";
 import { ModalUpdateBlog } from "./modal.update";
 import { HELPER } from "@/utils/helper";
 import { AccountService } from "@/services/account";
-import { ProductService } from "@/services/product";
+import { ReadingService } from "@/services/reading";
 
 export default function Order() {
   const COUNT = 5;
@@ -56,7 +56,7 @@ export default function Order() {
   };
 
   const renderProduct = async () => {
-    const res = await ProductService.getAll();
+    const res = await ReadingService.getAll();
     if (res && res.data.length > 0) {
       setProducts(res.data);
       setIsLoading(false);

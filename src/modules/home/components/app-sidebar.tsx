@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { FileText, PackageOpen, LogOut, Newspaper, Users } from "lucide-react";
+import {
+  LogOut,
+  BookOpenText,
+  SquarePen,
+  Headphones,
+  BookCheck,
+} from "lucide-react";
 import { NavProjects } from "./nav-projects";
 import { TeamSwitcher } from "./team-switcher";
 import {
@@ -20,25 +26,25 @@ const data = {
       name: "Reading Test",
       url: "?tab=reading",
       tab: "reading",
-      icon: <PackageOpen />,
+      icon: <BookOpenText />,
     },
     {
       name: "Listening Test",
       url: "?tab=listening",
       tab: "listening",
-      icon: <FileText />,
+      icon: <Headphones />,
     },
     {
       name: "Writing Test",
       url: "?tab=writing",
       tab: "writing",
-      icon: <Newspaper />,
+      icon: <SquarePen />,
     },
     {
       name: "Full Test",
       url: "?tab=full-test",
       tab: "full-test",
-      icon: <Users />,
+      icon: <BookCheck />,
     },
   ],
 };

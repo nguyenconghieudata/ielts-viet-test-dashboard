@@ -1,0 +1,588 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { UploadService } from "@/services/upload";
+import { Loader, Plus, Upload, X } from "lucide-react";
+import Image from "next/image";
+import { useCallback, useRef, useState } from "react";
+import ProductDescriptionEditor from "./quill";
+import "@/styles/scroll-hiding.css";
+import "@/styles/placeholder.css";
+import { ModalChooseQuestion } from "./modal.choose.question";
+import { QuestionList } from "./question-list";
+
+interface Question {
+  q_type: "multiple_choice" | "fill_in_the_blank";
+  question?: string;
+  choices?: string[];
+  answers?: string[];
+  start_passage?: string;
+  end_passage?: string;
+}
+
+interface PartDetails {
+  image: string;
+  content: string;
+  part_num: number;
+  questions: Question[];
+  tempQuestions: Question[];
+  selectedQuestionType: "multiple_choice" | "fill_in_the_blank" | null;
+}
+
+export function ModalCreateReadingDetail() {
+  const { toast } = useToast();
+  const mainImageInputRef = useRef<HTMLInputElement>(null);
+
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [mainPreview, setMainPreview] = useState<string | null>(null);
+  const [parts, setParts] = useState<PartDetails[]>([
+    {
+      image: "",
+      content: "",
+      part_num: 1,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+    {
+      image: "",
+      content: "",
+      part_num: 2,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+    {
+      image: "",
+      content: "",
+      part_num: 3,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+  ]);
+  const [activePart, setActivePart] = useState<number>(1);
+  const [name, setName] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [currentQuestion, setCurrentQuestion] = useState<Question>({
+    q_type: "multiple_choice",
+    choices: [""],
+    answers: [],
+  });
+
+  const handleMainImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
+      });
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng chọn file hình ảnh",
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMainPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const validateForm = () => {
+    if (!mainPreview) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng chọn ảnh chính.",
+      });
+      return false;
+    }
+    if (!name.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập tên.",
+      });
+      return false;
+    }
+    if (!description.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập mô tả.",
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const uploadResponse = await UploadService.uploadToCloudinary([file]);
+      return uploadResponse &&
+        Array.isArray(uploadResponse) &&
+        uploadResponse[0]
+        ? uploadResponse[0]?.secure_url
+        : "";
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      return "";
+    }
+  }, []);
+
+  const extractBase64Images = (htmlContent: string) => {
+    const imgTagRegex =
+      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+    return [...htmlContent.matchAll(imgTagRegex)].map((match) => match[1]);
+  };
+
+  const replaceBase64WithCloudUrls = async (
+    htmlContent: string,
+    uploadFunc: (file: File) => Promise<string>
+  ) => {
+    const imgTagRegex =
+      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+    let updatedContent = htmlContent;
+    const matches = [...htmlContent.matchAll(imgTagRegex)];
+    for (const match of matches) {
+      const base64String = match[1];
+      const file = base64ToFile(base64String);
+      const uploadedUrl = await uploadFunc(file);
+      updatedContent = updatedContent.replace(base64String, uploadedUrl);
+    }
+    return updatedContent;
+  };
+
+  const base64ToFile = (base64String: string): File => {
+    const arr = base64String.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], "image.png", { type: mime });
+  };
+
+  const handleAddPart = () => {
+    setParts([
+      ...parts,
+      {
+        image: "",
+        content: "",
+        part_num: parts.length + 1,
+        questions: [],
+        tempQuestions: [],
+        selectedQuestionType: null,
+      },
+    ]);
+  };
+
+  const handleContentChange = (content: string) => {
+    setParts(
+      parts.map((part) =>
+        part.part_num === activePart ? { ...part, content } : part
+      )
+    );
+  };
+
+  const handleQuestionsSelected = (newQuestions: Question[]) => {
+    setParts(
+      parts.map((part) =>
+        part.part_num === activePart
+          ? { ...part, questions: [...part.questions, ...newQuestions] }
+          : part
+      )
+    );
+  };
+
+  const validateCurrentQuestion = () => {
+    const selectedQuestionType = parts.find(
+      (part) => part.part_num === activePart
+    )?.selectedQuestionType;
+    if (!selectedQuestionType) {
+      toast({ variant: "destructive", title: "Vui lòng chọn loại câu hỏi." });
+      return false;
+    }
+    if (selectedQuestionType === "multiple_choice") {
+      if (!currentQuestion.question?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập câu hỏi trắc nghiệm.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.choices ||
+        currentQuestion.choices.length < 2 ||
+        currentQuestion.choices.some((c) => !c.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 lựa chọn hợp lệ cho câu trắc nghiệm.",
+        });
+        return false;
+      }
+      if (!currentQuestion.answers || currentQuestion.answers.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn ít nhất một đáp án đúng cho câu trắc nghiệm.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "fill_in_the_blank") {
+      if (
+        !currentQuestion.start_passage?.trim() ||
+        !currentQuestion.end_passage?.trim()
+      ) {
+        toast({
+          variant: "destructive",
+          title:
+            "Vui lòng nhập đầy đủ đoạn đầu và đoạn cuối cho câu điền vào chỗ trống.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answers ||
+        currentQuestion.answers.length === 0 ||
+        !currentQuestion.answers[0].trim()
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập đáp án cho câu điền vào chỗ trống.",
+        });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleAddChoice = () => {
+    setCurrentQuestion({
+      ...currentQuestion,
+      choices: [...(currentQuestion.choices || []), ""],
+    });
+  };
+
+  const handleChoiceChange = (index: number, value: string) => {
+    const updatedChoices = [...(currentQuestion.choices || [])];
+    updatedChoices[index] = value;
+    setCurrentQuestion({ ...currentQuestion, choices: updatedChoices });
+  };
+
+  const handleRemoveChoice = (index: number) => {
+    if (currentQuestion.choices && currentQuestion.choices.length > 1) {
+      setCurrentQuestion({
+        ...currentQuestion,
+        choices: currentQuestion.choices.filter((_, i) => i !== index),
+        answers: currentQuestion.answers?.filter((ans) =>
+          currentQuestion.choices?.includes(ans)
+        ),
+      });
+    }
+  };
+
+  const handleAnswerToggle = (choice: string) => {
+    const currentAnswers = currentQuestion.answers || [];
+    if (currentAnswers.includes(choice)) {
+      setCurrentQuestion({
+        ...currentQuestion,
+        answers: currentAnswers.filter((ans) => ans !== choice),
+      });
+    } else {
+      setCurrentQuestion({
+        ...currentQuestion,
+        answers: [...currentAnswers, choice],
+      });
+    }
+  };
+
+  const handleAddQuestion = () => {
+    const selectedQuestionType = parts.find(
+      (part) => part.part_num === activePart
+    )?.selectedQuestionType;
+    if (!validateCurrentQuestion()) return;
+    const newQuestion = { ...currentQuestion, q_type: selectedQuestionType! };
+    setParts(
+      parts.map((part) =>
+        part.part_num === activePart
+          ? { ...part, tempQuestions: [...part.tempQuestions, newQuestion] }
+          : part
+      )
+    );
+    setCurrentQuestion({
+      q_type: selectedQuestionType!,
+      question: "",
+      choices: selectedQuestionType === "multiple_choice" ? [""] : undefined,
+      answers: [],
+      start_passage: "",
+      end_passage: "",
+    });
+  };
+
+  const handleSaveQuestions = () => {
+    const activePartData = parts.find((part) => part.part_num === activePart);
+    if (!activePartData || activePartData.tempQuestions.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng thêm ít nhất một câu hỏi.",
+      });
+      return;
+    }
+    handleQuestionsSelected(activePartData.tempQuestions);
+    setParts(
+      parts.map((part) =>
+        part.part_num === activePart
+          ? { ...part, tempQuestions: [], selectedQuestionType: null }
+          : part
+      )
+    );
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+        >
+          <Plus size={16} className="mr-2" /> Tạo bài đọc
+        </button>
+      </DialogTrigger>
+      <DialogContent
+        className="sm:max-w-[1200px] max-h-[90vh]"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            <span className="!text-[20px]">Tạo bài đọc mới</span>
+          </DialogTitle>
+          <DialogDescription>
+            <span className="!text-[16px]">
+              Tạo đầy đủ nội dung và câu hỏi, sau đó nhấn{" "}
+              <strong className="text-indigo-600">Lưu</strong>
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="w-full grid grid-cols-3 gap-8">
+          <div className="col-span-3 flex flex-row gap-5">
+            {parts.map((part) => (
+              <button
+                key={part.part_num}
+                className={`border rounded-xl px-5 py-1 ${
+                  activePart === part.part_num
+                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    : "border-gray-200"
+                }`}
+                onClick={() => setActivePart(part.part_num)}
+              >
+                Passage {part.part_num}
+              </button>
+            ))}
+            <button
+              onClick={handleAddPart}
+              className="border border-gray-200 rounded-xl px-5 py-1"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="col-span-3">
+            <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
+              <div className="w-full grid items-center gap-4">
+                <div className="w-full mt-2">
+                  <ProductDescriptionEditor
+                    value={
+                      parts.find((part) => part.part_num === activePart)
+                        ?.content || ""
+                    }
+                    onChange={handleContentChange}
+                    title={`Nội dung bài đọc ${activePart}`}
+                  />
+                </div>
+              </div>
+              <div className="mt-2">
+                <ModalChooseQuestion
+                  onTypeSelected={(type) => {
+                    setParts(
+                      parts.map((part) =>
+                        part.part_num === activePart
+                          ? { ...part, selectedQuestionType: type }
+                          : part
+                      )
+                    );
+                    setCurrentQuestion({
+                      q_type: type,
+                      choices: type === "multiple_choice" ? [""] : undefined,
+                      answers: [],
+                      question: "",
+                      start_passage: "",
+                      end_passage: "",
+                    });
+                  }}
+                />
+              </div>
+              {parts.find((part) => part.part_num === activePart)
+                ?.selectedQuestionType && (
+                <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
+                  {parts.find((part) => part.part_num === activePart)
+                    ?.selectedQuestionType === "multiple_choice" && (
+                    <div className="flex flex-col gap-4">
+                      <div className="font-bold text-lg">MULTIPLE CHOICE</div>
+                      <Label className="text-[14.5px]">
+                        Câu hỏi trắc nghiệm
+                      </Label>
+                      <input
+                        value={currentQuestion.question || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            question: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập câu hỏi"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Lựa chọn</Label>
+                      {currentQuestion.choices?.map((choice, index) => (
+                        <div key={index} className="flex items-center gap-4">
+                          <input
+                            value={choice}
+                            onChange={(e) =>
+                              handleChoiceChange(index, e.target.value)
+                            }
+                            placeholder={`Lựa chọn ${index + 1}`}
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                          />
+                          <input
+                            type="checkbox"
+                            checked={currentQuestion.answers?.includes(choice)}
+                            onChange={() => handleAnswerToggle(choice)}
+                            disabled={!choice}
+                          />
+                          <button
+                            onClick={() => handleRemoveChoice(index)}
+                            className="bg-red-500 text-white p-2 rounded-full"
+                            disabled={currentQuestion.choices?.length === 1}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={handleAddChoice}
+                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                      >
+                        <Plus />
+                      </button>
+                    </div>
+                  )}
+                  {parts.find((part) => part.part_num === activePart)
+                    ?.selectedQuestionType === "fill_in_the_blank" && (
+                    <div className="flex flex-col gap-4">
+                      <div className="font-bold text-lg">FILL IN THE BLANK</div>
+                      <Label className="text-[14.5px]">Đoạn đầu</Label>
+                      <input
+                        value={currentQuestion.start_passage || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            start_passage: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập đoạn đầu"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Đoạn cuối</Label>
+                      <input
+                        value={currentQuestion.end_passage || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            end_passage: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập đoạn cuối"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Đáp án</Label>
+                      <input
+                        value={currentQuestion.answers?.[0] || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            answers: [e.target.value],
+                          })
+                        }
+                        placeholder="Nhập đáp án"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                    </div>
+                  )}
+                  <button
+                    onClick={handleAddQuestion}
+                    className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
+                  >
+                    <Plus /> Thêm câu hỏi
+                  </button>
+                  <div className="mt-4">
+                    <QuestionList
+                      questions={
+                        parts.find((part) => part.part_num === activePart)
+                          ?.tempQuestions || []
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+              <QuestionList
+                questions={
+                  parts.find((part) => part.part_num === activePart)
+                    ?.questions || []
+                }
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button
+              type="button"
+              variant="secondary"
+              className="!px-10 !text-[16px]"
+            >
+              Huỷ
+            </Button>
+          </DialogClose>
+          <button
+            type="submit"
+            onClick={handleSaveQuestions}
+            className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+          >
+            Lưu
+            {isLoading && <Loader className="animate-spin" size={17} />}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

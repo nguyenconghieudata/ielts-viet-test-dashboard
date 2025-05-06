@@ -18,4 +18,26 @@ export const API = {
   GET_ALL_ORDERS: `${BASE_URL}/inanhtructuyen/order`,
   UPDATE_ORDER: `${BASE_URL}/inanhtructuyen/order`,
   DOWNLOAD_IMAGE: `${BASE_URL}/inanhtructuyen/download`,
+
+  //READING
+  GET_ALL_READING: `${BASE_URL}/ielts-viet/test/skill?type=reading`,
+  GET_READING_PART_BY_ID: `${BASE_URL}/ielts-viet/test/skill`,
+
+  //LATEST
+  GET_ALL_LATEST: `${BASE_URL}/ielts-viet/test/skill`,
+
+  //LISTENING
+  GET_ALL_LISTENING: `${BASE_URL}/ielts-viet/test/skill?type=listening`,
+  GET_LISTENING_PART_BY_ID: `${BASE_URL}/ielts-viet/test/skill`,
+
+  //WRITING
+  GET_ALL_WRITING: `${BASE_URL}/ielts-viet/test/skill?type=writing`,
+  GET_WRITING_PART_BY_ID: `${BASE_URL}/ielts-viet/test/skill`,
+
+  //FULLTEST
+  GET_ALL_FULLTEST: `${BASE_URL}/ielts-viet/test`,
+  GET_FULL_TEST_BY_ID: `${BASE_URL}/ielts-viet/test`,
+
+  //GET QUESTIONS
+  GET_QUESTIONS: `${BASE_URL}/ielts-viet/test/part`,
 };

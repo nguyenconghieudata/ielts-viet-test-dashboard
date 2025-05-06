@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ProductService } from "@/services/product";
 import { UploadService } from "@/services/upload";
 import { Loader, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
@@ -22,70 +21,10 @@ import ProductDescriptionEditor from "./quill";
 import Select from "react-select";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
+import { ReadingService } from "@/services/reading";
+import { ModalCreateReadingDetail } from "./modal.create.detail";
 
-export function ModalCreateProduct() {
-  const colorMap: { [key: string]: string } = {
-    white: "#FFFFFF",
-    black: "#000000",
-    gold: "#EBB305",
-    silver: "#C0C0C0",
-    wood: "#713F11",
-  };
-
-  const colorOpt = [
-    { value: "white", label: "Trắng" },
-    { value: "black", label: "Đen" },
-    { value: "gold", label: "Gold" },
-    { value: "silver", label: "Bạc" },
-    { value: "wood", label: "Gỗ" },
-  ];
-
-  const customStyles = {
-    option: (provided: any, state: { isFocused: boolean }) => ({
-      ...provided,
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      backgroundColor: state.isFocused ? "#EEEEEE" : "white",
-      color: "black",
-      cursor: "pointer",
-    }),
-    control: (provided: any) => ({
-      ...provided,
-      borderColor: "#CFCFCF",
-      boxShadow: "none",
-      "&:hover": {
-        borderColor: "#CFCFCF",
-      },
-    }),
-  };
-
-  const formatOptionLabel = ({
-    value,
-    label,
-  }: {
-    value: string;
-    label: string;
-  }) => (
-    <div className="flex items-center gap-2">
-      <span
-        className={`w-4 h-4 rounded-sm border ${
-          value === "white"
-            ? "border-gray-500"
-            : value === "black"
-            ? "border-black"
-            : value === "gold"
-            ? "border-yellow-500"
-            : value === "silver"
-            ? "border-neutral-300"
-            : "border-amber-900"
-        } }`}
-        style={{ backgroundColor: colorMap[value] }}
-      ></span>
-      {label}
-    </div>
-  );
-
+export function ModalCreateReading() {
   const { toast } = useToast();
 
   const mainImageInputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +33,6 @@ export function ModalCreateProduct() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [mainPreview, setMainPreview] = useState<string | null>(null);
-  const [secondaryPreviews, setSecondaryPreviews] = useState<string[]>([]);
 
   const [name, setName] = useState<string>("");
   // const [price, setPrice] = useState<string>("");
@@ -126,46 +64,8 @@ export function ModalCreateProduct() {
     reader.readAsDataURL(file);
   };
 
-  const handleSecondaryImagesChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-    const newPreviews: string[] = [];
-    Array.from(files).forEach((file) => {
-      // if (file.size > 5 * 1024 * 1024) {
-      //     alert(`File ${file.name} quá lớn. Vui lòng chọn file nhỏ hơn 5MB.`);
-      //     return;
-      // }
-      if (!file.type.startsWith("image/")) {
-        alert(`File ${file.name} không phải là hình ảnh.`);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string);
-        if (newPreviews.length === files.length) {
-          setSecondaryPreviews((prev) => [...prev, ...newPreviews]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleColorChange = (selectedOptions: any) => {
-    setColor(selectedOptions.map((option: any) => option.value));
-  };
-
   const handleUpdateMainImage = () => {
     mainImageInputRef.current?.click();
-  };
-
-  const handleUpdateSecondaryImages = () => {
-    secondaryImageInputRef.current?.click();
-  };
-
-  const handleRemoveSecondaryImage = (index: number) => {
-    setSecondaryPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddSizePrice = () => {
@@ -193,14 +93,6 @@ export function ModalCreateProduct() {
       toast({
         variant: "destructive",
         title: "Vui lòng chọn ảnh chính.",
-      });
-      return false;
-    }
-
-    if (secondaryPreviews.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng thêm ít nhất một ảnh phụ.",
       });
       return false;
     }
@@ -331,9 +223,7 @@ export function ModalCreateProduct() {
     const uploadMainImage: any = await UploadService.uploadToCloudinary([
       mainPreview,
     ]);
-    const uploadSecondaryImages: any = await UploadService.uploadToCloudinary(
-      secondaryPreviews
-    );
+
     const body = {
       name: name,
       description: updatedDescription,
@@ -342,10 +232,9 @@ export function ModalCreateProduct() {
       category: category,
       color: color,
       thumbnail: uploadMainImage[0]?.url || "",
-      images: uploadSecondaryImages?.map((image: any) => image.url),
     };
 
-    await ProductService.createProduct(body);
+    await ReadingService.createProduct(body);
     setIsLoading(false);
     window.location.href = "/?tab=product";
   };
@@ -357,7 +246,7 @@ export function ModalCreateProduct() {
           type="button"
           className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <Plus size={16} className="mr-2" /> Thêm sản phẩm
+          <Plus size={16} className="mr-2" /> Thêm bài đọc
         </button>
       </DialogTrigger>
       <DialogContent
@@ -366,13 +255,13 @@ export function ModalCreateProduct() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Thêm sản phẩm mới</span>
+            <span className="!text-[20px]">Thêm bài đọc mới</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin sản phẩm và nhấn{" "}
-              <strong className="text-indigo-600">Lưu</strong> để tạo sản phẩm
-              mới.
+              Điền thông tin bài đọc và nhấn{" "}
+              <strong className="text-indigo-600">Tạo bài đọc</strong> để tạo
+              bài đọc mới.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -429,52 +318,12 @@ export function ModalCreateProduct() {
                   )}
                 </div>
               </div>
-              <Label htmlFor="images" className="text-right !text-[16px]">
-                Hình phụ
-              </Label>
-              <div className="col-span-3 mt-2">
-                <div
-                  onClick={handleUpdateSecondaryImages}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 hover:text-primary-700 cursor-pointer"
-                >
-                  <div className="flex flex-col items-center">
-                    <span>+ Tải lên</span>
-                  </div>
-                </div>
-                <input
-                  type="file"
-                  ref={secondaryImageInputRef}
-                  onChange={handleSecondaryImagesChange}
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-3 mt-4 pr-2">
-                {secondaryPreviews.map((preview, index) => (
-                  <div key={index} className="relative">
-                    <Image
-                      src={preview}
-                      alt={`secondary-preview-${index}`}
-                      className="rounded-sm border border-gray-200 w-full h-28 object-cover"
-                      width={100}
-                      height={100}
-                    />
-                    <button
-                      onClick={() => handleRemoveSecondaryImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full text-xs"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
           <div className="col-span-2">
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
               <Label htmlFor="description" className="text-[14.5px]">
-                Tên sản phẩm
+                Tên bài đọc
               </Label>
               <div className="w-full grid items-center gap-4">
                 <textarea
@@ -485,123 +334,26 @@ export function ModalCreateProduct() {
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
-              <Label htmlFor="description" className="text-[14.5px] mt-2">
-                Chọn danh mục
+              <Label htmlFor={`price`} className="text-[14.5px]">
+                Giá sản phẩm
               </Label>
-              <div className="w-full grid items-center gap-4">
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => {
-                    setCategory(e.target.value);
-                  }}
-                  className="col-span-3 p-2 border border-[#CFCFCF] rounded"
-                >
-                  <option value="">Chọn danh mục</option>
-                  <option value="Plastic">Plastic</option>
-                  <option value="Frame">Khung Ảnh</option>
-                  <option value="Album">Album</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-4 w-full">
-                {sizesAndPrices.map((sp, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-row justify-between items-center gap-4 w-full"
-                  >
-                    <div className="flex flex-col w-full">
-                      <Label
-                        htmlFor={`size-${index}`}
-                        className="text-[14.5px]"
-                      >
-                        Kích cỡ
-                      </Label>
-                      <div className="w-full grid items-center gap-4 mt-1">
-                        <input
-                          id={`size-${index}`}
-                          value={sp.size}
-                          onChange={(e) =>
-                            handleSizePriceChange(index, "size", e.target.value)
-                          }
-                          placeholder="Kích cỡ"
-                          className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col w-full">
-                      <Label
-                        htmlFor={`price-${index}`}
-                        className="text-[14.5px]"
-                      >
-                        Giá sản phẩm
-                      </Label>
-                      <div className="w-full grid items-center gap-4 mt-1">
-                        <input
-                          id={`price-${index}`}
-                          value={sp.price}
-                          onChange={(e) =>
-                            handleSizePriceChange(
-                              index,
-                              "price",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Giá"
-                          className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                        />
-                      </div>
-                    </div>
-                    {sizesAndPrices.length > 1 && (
-                      <button
-                        onClick={() => handleRemoveSizePrice(index)}
-                        className="mt-6 bg-red-500 text-white p-2 rounded-full"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <div>
-                  <button
-                    type="button"
-                    onClick={handleAddSizePrice}
-                    className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center"
-                  >
-                    <Plus />
-                  </button>
-                </div>
-              </div>
-
-              <Label htmlFor="description" className="text-[14.5px] mt-2">
-                Chọn màu sắc
-              </Label>
-              <div className="w-full grid items-center gap-4">
-                <Select
-                  className="cursor-pointer pl-[0.5px]"
-                  options={colorOpt}
-                  isMulti={true}
-                  placeholder="Chọn màu"
-                  onChange={handleColorChange}
-                  value={colorOpt.filter((option) =>
-                    color.includes(option.value)
-                  )}
-                  styles={customStyles}
-                  formatOptionLabel={formatOptionLabel}
+              <div className="w-full grid items-center gap-4 mt-1">
+                <input
+                  id={`price`}
+                  value={2}
+                  placeholder="Giá"
+                  className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                 />
               </div>
-              <div className="w-full mt-2">
+              {/* <div className="w-full mt-2">
                 <ProductDescriptionEditor
                   value={description}
                   onChange={setDescription}
                   title="Mô tả sản phẩm"
                 />
-              </div>
-              <div className="w-full mt-2">
-                <ProductDescriptionEditor
-                  value={introduction}
-                  onChange={setIntroduction}
-                  title="Giới thiệu sản phẩm"
-                />
+              </div> */}
+              <div className="mt-2">
+                <ModalCreateReadingDetail />
               </div>
             </div>
           </div>
@@ -621,7 +373,7 @@ export function ModalCreateProduct() {
             onClick={handleSubmit}
             className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
           >
-            Lưu
+            Tạo bài đọc
             {isLoading && <Loader className="animate-spin" size={17} />}
           </button>
         </DialogFooter>

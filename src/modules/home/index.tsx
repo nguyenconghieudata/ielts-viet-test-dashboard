@@ -16,10 +16,10 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useSearchParams } from "next/navigation";
-import Product from "./modules/product";
-import Order from "./modules/order";
-import Blog from "./modules/blog";
-import Customer from "./modules/customer";
+import Order from "./modules/listening";
+import Blog from "./modules/writing";
+import Customer from "./modules/full-test";
+import Reading from "./modules/reading";
 
 export default function HomeClient() {
   const param = useSearchParams();
@@ -27,7 +27,7 @@ export default function HomeClient() {
   const renderTab = (tab: string) => {
     switch (tab) {
       case "reading":
-        return <Product />;
+        return <Reading />;
       case "listening":
         return <Order />;
       case "writing":
@@ -35,22 +35,22 @@ export default function HomeClient() {
       case "full-test":
         return <Customer />;
       default:
-        return <Product />;
+        return <Reading />;
     }
   };
 
   const renderBreadcrumb = (tab: string) => {
     switch (tab) {
       case "reading":
-        return "Sản Phẩm";
+        return "Bài Đọc";
       case "listening":
-        return "Đơn Hàng";
+        return "Bài Nghe";
       case "writing":
         return "Bài Viết";
       case "full-test":
-        return "Khách Hàng";
+        return "Full Test";
       default:
-        return "Sản Phẩm";
+        return "Bài Đọc";
     }
   };
 
