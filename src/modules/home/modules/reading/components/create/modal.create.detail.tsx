@@ -13,18 +13,16 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { UploadService } from "@/services/upload";
-import { Loader, Plus, Upload, X } from "lucide-react";
-import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
-import ProductDescriptionEditor from "./quill";
+import { Loader, Plus, X } from "lucide-react";
+import { useRef, useState } from "react";
+import ProductDescriptionEditor from "../quill";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ModalChooseQuestion } from "./modal.choose.question";
+import { ModalChooseQuestion } from "../modal.choose.question";
 import { QuestionList } from "./question-list";
 
 interface Question {
-  q_type: "multiple_choice" | "fill_in_the_blank";
+  q_type: "MP" | "FB";
   question?: string;
   choices?: string[];
   answers?: string[];
@@ -38,183 +36,171 @@ interface PartDetails {
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "multiple_choice" | "fill_in_the_blank" | null;
+  selectedQuestionType: "MP" | "FB" | null;
 }
 
-export function ModalCreateReadingDetail() {
+interface ModalCreateReadingDetailProps {
+  parts: PartDetails[];
+  onPartsUpdate: (updatedParts: PartDetails[]) => void;
+}
+
+export function ModalCreateReadingDetail({
+  parts,
+  onPartsUpdate,
+}: ModalCreateReadingDetailProps) {
   const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const dialogCloseRef = useRef<HTMLButtonElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
-  const [parts, setParts] = useState<PartDetails[]>([
-    {
-      image: "",
-      content: "",
-      part_num: 1,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      image: "",
-      content: "",
-      part_num: 2,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      image: "",
-      content: "",
-      part_num: 3,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-  ]);
+
   const [activePart, setActivePart] = useState<number>(1);
-  const [name, setName] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
-    q_type: "multiple_choice",
+    q_type: "MP",
     choices: [""],
     answers: [],
   });
 
-  const handleMainImageChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
-      });
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng chọn file hình ảnh",
-      });
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setMainPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<
+    number | null
+  >(null);
 
-  const validateForm = () => {
-    if (!mainPreview) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng chọn ảnh chính.",
-      });
-      return false;
-    }
-    if (!name.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng nhập tên.",
-      });
-      return false;
-    }
-    if (!description.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng nhập mô tả.",
-      });
-      return false;
-    }
-    return true;
-  };
+  // const handleMainImageChange = (
+  //   event: React.ChangeEvent<HTMLInputElement>
+  // ) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
+  //     });
+  //     return;
+  //   }
+  //   if (!file.type.startsWith("image/")) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Vui lòng chọn file hình ảnh",
+  //     });
+  //     return;
+  //   }
+  //   const reader = new FileReader();
+  //   reader.onloadend = () => {
+  //     setMainPreview(reader.result as string);
+  //   };
+  //   reader.readAsDataURL(file);
+  // };
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      return uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-        ? uploadResponse[0]?.secure_url
-        : "";
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
+  // const validateForm = () => {
+  //   if (!mainPreview) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Vui lòng chọn ảnh chính.",
+  //     });
+  //     return false;
+  //   }
+  //   if (!name.trim()) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Vui lòng nhập tên.",
+  //     });
+  //     return false;
+  //   }
+  //   if (!description.trim()) {
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Vui lòng nhập mô tả.",
+  //     });
+  //     return false;
+  //   }
+  //   return true;
+  // };
 
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    return [...htmlContent.matchAll(imgTagRegex)].map((match) => match[1]);
-  };
+  // const handleImageUpload = useCallback(async (file: File) => {
+  //   const formData = new FormData();
+  //   formData.append("file", file);
+  //   try {
+  //     const uploadResponse = await UploadService.uploadToCloudinary([file]);
+  //     return uploadResponse &&
+  //       Array.isArray(uploadResponse) &&
+  //       uploadResponse[0]
+  //       ? uploadResponse[0]?.secure_url
+  //       : "";
+  //   } catch (error) {
+  //     console.error("Image upload failed:", error);
+  //     return "";
+  //   }
+  // }, []);
 
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-    return updatedContent;
-  };
+  // const extractBase64Images = (htmlContent: string) => {
+  //   const imgTagRegex =
+  //     /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+  //   return [...htmlContent.matchAll(imgTagRegex)].map((match) => match[1]);
+  // };
 
-  const base64ToFile = (base64String: string): File => {
-    const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], "image.png", { type: mime });
-  };
+  // const replaceBase64WithCloudUrls = async (
+  //   htmlContent: string,
+  //   uploadFunc: (file: File) => Promise<string>
+  // ) => {
+  //   const imgTagRegex =
+  //     /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+  //   let updatedContent = htmlContent;
+  //   const matches = [...htmlContent.matchAll(imgTagRegex)];
+  //   for (const match of matches) {
+  //     const base64String = match[1];
+  //     const file = base64ToFile(base64String);
+  //     const uploadedUrl = await uploadFunc(file);
+  //     updatedContent = updatedContent.replace(base64String, uploadedUrl);
+  //   }
+  //   return updatedContent;
+  // };
 
-  const handleAddPart = () => {
-    setParts([
-      ...parts,
-      {
-        image: "",
-        content: "",
-        part_num: parts.length + 1,
-        questions: [],
-        tempQuestions: [],
-        selectedQuestionType: null,
-      },
-    ]);
-  };
+  // const base64ToFile = (base64String: string): File => {
+  //   const arr = base64String.split(",");
+  //   const mime = arr[0].match(/:(.*?);/)?.[1];
+  //   const bstr = atob(arr[1]);
+  //   let n = bstr.length;
+  //   const u8arr = new Uint8Array(n);
+  //   while (n--) {
+  //     u8arr[n] = bstr.charCodeAt(n);
+  //   }
+  //   return new File([u8arr], "image.png", { type: mime });
+  // };
+
+  // const handleAddPart = () => {
+  //   const updatedParts = [
+  //     ...parts,
+  //     {
+  //       image: "",
+  //       content: "",
+  //       part_num: parts.length + 1,
+  //       questions: [],
+  //       tempQuestions: [],
+  //       selectedQuestionType: null,
+  //     },
+  //   ];
+  //   onPartsUpdate(updatedParts);
+  // };
+
+  // Ensure content is updated for the active passage and log for debugging
 
   const handleContentChange = (content: string) => {
-    setParts(
-      parts.map((part) =>
-        part.part_num === activePart ? { ...part, content } : part
-      )
+    // console.log(`Updating content for Passage ${activePart}:`, content);
+    const updatedParts = parts.map((part) =>
+      part.part_num === activePart ? { ...part, content } : part
     );
+    onPartsUpdate(updatedParts);
   };
 
-  const handleQuestionsSelected = (newQuestions: Question[]) => {
-    setParts(
-      parts.map((part) =>
-        part.part_num === activePart
-          ? { ...part, questions: [...part.questions, ...newQuestions] }
-          : part
-      )
-    );
-  };
+  // const handleQuestionsSelected = (newQuestions: Question[]) => {
+  //   const updatedParts = parts.map((part) =>
+  //     part.part_num === activePart
+  //       ? { ...part, questions: [...part.questions, ...newQuestions] }
+  //       : part
+  //   );
+  //   onPartsUpdate(updatedParts);
+  // };
 
   const validateCurrentQuestion = () => {
     const selectedQuestionType = parts.find(
@@ -224,7 +210,7 @@ export function ModalCreateReadingDetail() {
       toast({ variant: "destructive", title: "Vui lòng chọn loại câu hỏi." });
       return false;
     }
-    if (selectedQuestionType === "multiple_choice") {
+    if (selectedQuestionType === "MP") {
       if (!currentQuestion.question?.trim()) {
         toast({
           variant: "destructive",
@@ -250,7 +236,7 @@ export function ModalCreateReadingDetail() {
         });
         return false;
       }
-    } else if (selectedQuestionType === "fill_in_the_blank") {
+    } else if (selectedQuestionType === "FB") {
       if (
         !currentQuestion.start_passage?.trim() ||
         !currentQuestion.end_passage?.trim()
@@ -323,41 +309,122 @@ export function ModalCreateReadingDetail() {
     )?.selectedQuestionType;
     if (!validateCurrentQuestion()) return;
     const newQuestion = { ...currentQuestion, q_type: selectedQuestionType! };
-    setParts(
-      parts.map((part) =>
-        part.part_num === activePart
-          ? { ...part, tempQuestions: [...part.tempQuestions, newQuestion] }
-          : part
-      )
+    const updatedParts = parts.map((part) =>
+      part.part_num === activePart
+        ? {
+            ...part,
+            tempQuestions:
+              editingQuestionIndex !== null
+                ? part.tempQuestions.map((q, i) =>
+                    i === editingQuestionIndex ? newQuestion : q
+                  )
+                : [...part.tempQuestions, newQuestion],
+          }
+        : part
     );
+    onPartsUpdate(updatedParts);
     setCurrentQuestion({
       q_type: selectedQuestionType!,
       question: "",
-      choices: selectedQuestionType === "multiple_choice" ? [""] : undefined,
+      choices: selectedQuestionType === "MP" ? [""] : undefined,
       answers: [],
       start_passage: "",
       end_passage: "",
     });
+    setEditingQuestionIndex(null);
+    toast({
+      title:
+        editingQuestionIndex !== null
+          ? "Câu hỏi đã được cập nhật"
+          : "Câu hỏi đã được thêm",
+      description:
+        editingQuestionIndex !== null
+          ? "Câu hỏi đã được sửa thành công."
+          : "Câu hỏi mới đã được thêm vào danh sách.",
+    });
+  };
+
+  const handleEditQuestion = (index: number) => {
+    const questionToEdit = parts.find((part) => part.part_num === activePart)
+      ?.tempQuestions[index];
+    if (questionToEdit) {
+      setCurrentQuestion({ ...questionToEdit });
+      setEditingQuestionIndex(index);
+      const updatedParts = parts.map((part) =>
+        part.part_num === activePart
+          ? { ...part, selectedQuestionType: questionToEdit.q_type }
+          : part
+      );
+      onPartsUpdate(updatedParts);
+    }
+  };
+
+  const handleDeleteQuestion = (index: number) => {
+    const updatedParts = parts.map((part) =>
+      part.part_num === activePart
+        ? {
+            ...part,
+            tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
+          }
+        : part
+    );
+    onPartsUpdate(updatedParts);
+    toast({
+      title: "Đã xóa câu hỏi",
+      description: "Câu hỏi đã được xóa khỏi danh sách.",
+    });
   };
 
   const handleSaveQuestions = () => {
-    const activePartData = parts.find((part) => part.part_num === activePart);
-    if (!activePartData || activePartData.tempQuestions.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng thêm ít nhất một câu hỏi.",
-      });
-      return;
+    const updatedParts = parts.map((part) => {
+      if (part.tempQuestions.length === 0) {
+        return part;
+      }
+
+      const formattedQuestions: Question[] = part.tempQuestions.map(
+        (question) => {
+          if (question.q_type === "MP") {
+            return {
+              q_type: "MP",
+              question: question.question || "",
+              choices: question.choices || [],
+              answers: question.answers || [],
+            };
+          } else {
+            return {
+              q_type: "FB",
+              start_passage: question.start_passage || "",
+              end_passage: question.end_passage || "",
+              answers: question.answers || [],
+            };
+          }
+        }
+      );
+
+      return {
+        ...part,
+        questions: [...part.questions, ...formattedQuestions],
+        tempQuestions: [],
+        selectedQuestionType: null,
+      };
+    });
+
+    onPartsUpdate(updatedParts);
+    toast({
+      title: "Đã lưu câu hỏi",
+      description: "Tất cả câu hỏi đã được lưu thành công.",
+    });
+
+    if (dialogCloseRef.current) {
+      dialogCloseRef.current.click();
     }
-    handleQuestionsSelected(activePartData.tempQuestions);
-    setParts(
-      parts.map((part) =>
-        part.part_num === activePart
-          ? { ...part, tempQuestions: [], selectedQuestionType: null }
-          : part
-      )
-    );
   };
+
+  const hasQuestions =
+    (parts.find((part) => part.part_num === activePart)?.questions?.length ||
+      0) > 0 ||
+    (parts.find((part) => part.part_num === activePart)?.tempQuestions.length ||
+      0) > 0;
 
   return (
     <Dialog>
@@ -366,7 +433,13 @@ export function ModalCreateReadingDetail() {
           type="button"
           className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <Plus size={16} className="mr-2" /> Tạo bài đọc
+          {!hasQuestions ? (
+            <>
+              <Plus size={16} className="mr-2" /> Tạo câu hỏi
+            </>
+          ) : (
+            <>Chỉnh sửa câu hỏi</>
+          )}
         </button>
       </DialogTrigger>
       <DialogContent
@@ -375,7 +448,7 @@ export function ModalCreateReadingDetail() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Tạo bài đọc mới</span>
+            <span className="!text-[20px]">Tạo câu hỏi</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
@@ -399,18 +472,19 @@ export function ModalCreateReadingDetail() {
                 Passage {part.part_num}
               </button>
             ))}
-            <button
+            {/* <button
               onClick={handleAddPart}
               className="border border-gray-200 rounded-xl px-5 py-1"
             >
               <Plus size={16} />
-            </button>
+            </button> */}
           </div>
           <div className="col-span-3">
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
               <div className="w-full grid items-center gap-4">
                 <div className="w-full mt-2">
                   <ProductDescriptionEditor
+                    key={`editor-${activePart}`} // Force re-render when activePart changes
                     value={
                       parts.find((part) => part.part_num === activePart)
                         ?.content || ""
@@ -423,21 +497,21 @@ export function ModalCreateReadingDetail() {
               <div className="mt-2">
                 <ModalChooseQuestion
                   onTypeSelected={(type) => {
-                    setParts(
-                      parts.map((part) =>
-                        part.part_num === activePart
-                          ? { ...part, selectedQuestionType: type }
-                          : part
-                      )
+                    const updatedParts = parts.map((part) =>
+                      part.part_num === activePart
+                        ? { ...part, selectedQuestionType: type }
+                        : part
                     );
+                    onPartsUpdate(updatedParts);
                     setCurrentQuestion({
                       q_type: type,
-                      choices: type === "multiple_choice" ? [""] : undefined,
+                      choices: type === "MP" ? [""] : undefined,
                       answers: [],
                       question: "",
                       start_passage: "",
                       end_passage: "",
                     });
+                    setEditingQuestionIndex(null);
                   }}
                 />
               </div>
@@ -445,7 +519,7 @@ export function ModalCreateReadingDetail() {
                 ?.selectedQuestionType && (
                 <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
                   {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "multiple_choice" && (
+                    ?.selectedQuestionType === "MP" && (
                     <div className="flex flex-col gap-4">
                       <div className="font-bold text-lg">MULTIPLE CHOICE</div>
                       <Label className="text-[14.5px]">
@@ -497,7 +571,7 @@ export function ModalCreateReadingDetail() {
                     </div>
                   )}
                   {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "fill_in_the_blank" && (
+                    ?.selectedQuestionType === "FB" && (
                     <div className="flex flex-col gap-4">
                       <div className="font-bold text-lg">FILL IN THE BLANK</div>
                       <Label className="text-[14.5px]">Đoạn đầu</Label>
@@ -542,7 +616,13 @@ export function ModalCreateReadingDetail() {
                     onClick={handleAddQuestion}
                     className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
                   >
-                    <Plus /> Thêm câu hỏi
+                    {editingQuestionIndex !== null ? (
+                      <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
+                    ) : (
+                      <>
+                        <Plus /> Thêm câu hỏi
+                      </>
+                    )}
                   </button>
                   <div className="mt-4">
                     <QuestionList
@@ -550,6 +630,8 @@ export function ModalCreateReadingDetail() {
                         parts.find((part) => part.part_num === activePart)
                           ?.tempQuestions || []
                       }
+                      onEdit={handleEditQuestion}
+                      onDelete={handleDeleteQuestion}
                     />
                   </div>
                 </div>
@@ -569,6 +651,7 @@ export function ModalCreateReadingDetail() {
               type="button"
               variant="secondary"
               className="!px-10 !text-[16px]"
+              ref={dialogCloseRef}
             >
               Huỷ
             </Button>

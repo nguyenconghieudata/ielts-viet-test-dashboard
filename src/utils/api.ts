@@ -22,6 +22,9 @@ export const API = {
   //READING
   GET_ALL_READING: `${BASE_URL}/ielts-viet/test/skill?type=reading`,
   GET_READING_PART_BY_ID: `${BASE_URL}/ielts-viet/test/skill`,
+  UPDATE_READING: `${BASE_URL}/ielts-viet/test/skill`,
+  CREATE_READING: `${BASE_URL}/ielts-viet/test/skill`,
+  DELETE_READING: `${BASE_URL}/ielts-viet/test/skill`,
 
   //LATEST
   GET_ALL_LATEST: `${BASE_URL}/ielts-viet/test/skill`,

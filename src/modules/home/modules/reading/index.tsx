@@ -2,12 +2,13 @@
 "use client";
 
 import Image from "next/image";
-import { ModalCreateReading } from "./components/modal.create";
+import { ModalCreateReading } from "./components/create/modal.create";
 import { useEffect, useState } from "react";
 import { ReadingService } from "@/services/reading";
 import { Loader } from "lucide-react";
 import { IMAGES } from "@/utils/image";
 import { QuestionsService } from "@/services/questions";
+import { ModalUpdateReading } from "./components/update/modal.update";
 
 export default function Reading() {
   const COUNT = 5;
@@ -54,7 +55,6 @@ export default function Reading() {
     try {
       setIsLoading(true);
       const res = await ReadingService.getAll();
-      console.log("Raw API response:", res);
       if (res && res?.data?.length > 0) {
         console.log("API data:", res.data);
         render(res.data);
@@ -165,6 +165,9 @@ export default function Reading() {
                         Câu hỏi
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
+                        Thời gian làm bài
+                      </th>
+                      <th scope="col" className="w-32 px-4 py-3">
                         Đã làm
                       </th>
                       <th scope="col" className="w-24 px-4 py-3">
@@ -182,7 +185,7 @@ export default function Reading() {
                           <Image
                             src={item?.thumbnail || IMAGES.LOGO}
                             alt="img"
-                            className="w-20 h-20 rounded-md object-cover col-span-3 border border-gray-300"
+                            className="w-24 h-20 rounded-md object-cover col-span-3 border border-gray-300"
                             width={100}
                             height={100}
                           />
@@ -190,17 +193,21 @@ export default function Reading() {
                             {item?.name}
                           </span>
                         </td>
-                        <td className="w-32 px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {item.parts.length}
+                        <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item.parts.length} phần
                         </td>
-                        <td className="w-32 px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {questionCounts[item.id || item.name] ?? "Loading..."}
+                        <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {questionCounts[item.id || item.name] ?? "Loading..."}{" "}
+                          câu
                         </td>
-                        <td className="w-24 text-[14px] px-8 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <td className="w-32 px-14 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item.time} phút
+                        </td>
+                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
                         </td>
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {/* <ModalUpdateReading data={item} /> */}
+                          <ModalUpdateReading data={item} />
                         </td>
                       </tr>
                     ))}

@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 
 interface ModalChooseQuestionProps {
-  onTypeSelected: (type: "multiple_choice" | "fill_in_the_blank") => void;
+  onTypeSelected: (type: "MP" | "FB") => void;
 }
 
 export function ModalChooseQuestion({
@@ -39,13 +38,13 @@ export function ModalChooseQuestion({
         <div className="flex flex-row gap-5">
           <button
             className="cursor-pointer border rounded-xl px-5 py-1 border-indigo-600 bg-indigo-600 text-white"
-            onClick={() => onTypeSelected("multiple_choice")}
+            onClick={() => onTypeSelected("MP")}
           >
             Multiple Choice
           </button>
           <button
             className="cursor-pointer border rounded-xl px-5 py-1 border-indigo-600 bg-indigo-600 text-white"
-            onClick={() => onTypeSelected("fill_in_the_blank")}
+            onClick={() => onTypeSelected("FB")}
           >
             Fill in the blank
           </button>

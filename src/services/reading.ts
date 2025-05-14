@@ -16,11 +16,11 @@ const getAll = async () => {
   }
 };
 
-const createProduct = async (payload: any) => {
+const createReading = async (payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(API.CREATE_PRODUCT, {
+    const response = await fetch(API.CREATE_READING, {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -36,13 +36,13 @@ const createProduct = async (payload: any) => {
   }
 };
 
-const updateProduct = async (id: any, payload: any) => {
+const updateReading = async (id: any, payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    console.log("check update: " + JSON.stringify(payload));
+    console.log("check update kkk: " + JSON.stringify(payload));
 
-    const response = await fetch(`${API.UPDATE_PRODUCT}/${id}`, {
+    const response = await fetch(`${API.UPDATE_READING}/${id}`, {
       method: "PUT",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -50,7 +50,6 @@ const updateProduct = async (id: any, payload: any) => {
     });
     if (!response.ok) {
       console.log("check create: failed", response.status);
-
       throw new Error(`Failed - Status: ${response.status}`);
     }
     console.log("check create: success", response.status);
@@ -61,11 +60,11 @@ const updateProduct = async (id: any, payload: any) => {
   }
 };
 
-const deleteProduct = async (id: any) => {
+const deleteReading = async (id: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(`${API.DELETE_PRODUCT}/${id}`, {
+    const response = await fetch(`${API.DELETE_READING}/${id}`, {
       method: "DELETE",
       headers: myHeaders,
       redirect: "follow",
@@ -99,8 +98,8 @@ const getReadingById = async (id: string) => {
 
 export const ReadingService = {
   getAll,
-  createProduct,
-  updateProduct,
-  deleteProduct,
+  createReading,
+  updateReading,
+  deleteReading,
   getReadingById,
 };

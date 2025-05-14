@@ -17,12 +17,30 @@ import { UploadService } from "@/services/upload";
 import { Loader, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
-import ProductDescriptionEditor from "./quill";
-import Select from "react-select";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ReadingService } from "@/services/reading";
 import { ModalCreateReadingDetail } from "./modal.create.detail";
+
+interface Question {
+  q_type: "MP" | "FB";
+  question?: string;
+  choices?: string[];
+  answers?: string[];
+  start_passage?: string;
+  end_passage?: string;
+  isMultiple?: boolean;
+  describe_image?: string;
+}
+
+interface PartDetails {
+  image: string;
+  content: string;
+  part_num: number;
+  questions: Question[];
+  tempQuestions: Question[];
+  selectedQuestionType: "MP" | "FB" | null;
+}
 
 export function ModalCreateReading() {
   const { toast } = useToast();
@@ -35,14 +53,38 @@ export function ModalCreateReading() {
   const [mainPreview, setMainPreview] = useState<string | null>(null);
 
   const [name, setName] = useState<string>("");
-  // const [price, setPrice] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [introduction, setIntroduction] = useState<string>("");
-  const [category, setCategory] = useState<string>("");
-  const [color, setColor] = useState<string[]>([]);
-  const [sizesAndPrices, setSizesAndPrices] = useState<
-    { size: string; price: string }[]
-  >([{ size: "", price: "" }]);
+  const [time, setTime] = useState<number>(0);
+
+  const [parts, setParts] = useState<PartDetails[]>([
+    {
+      image: "",
+      content: "",
+      part_num: 1,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+    {
+      image: "",
+      content: "",
+      part_num: 2,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+    {
+      image: "",
+      content: "",
+      part_num: 3,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+  ]);
+
+  const handlePartsUpdate = (updatedParts: PartDetails[]) => {
+    setParts(updatedParts);
+  };
 
   const handleMainImageChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -68,26 +110,6 @@ export function ModalCreateReading() {
     mainImageInputRef.current?.click();
   };
 
-  const handleAddSizePrice = () => {
-    setSizesAndPrices([...sizesAndPrices, { size: "", price: "" }]);
-  };
-
-  const handleSizePriceChange = (
-    index: number,
-    field: "size" | "price",
-    value: string
-  ) => {
-    const updatedSizesAndPrices = [...sizesAndPrices];
-    updatedSizesAndPrices[index][field] = value;
-    setSizesAndPrices(updatedSizesAndPrices);
-  };
-
-  const handleRemoveSizePrice = (index: number) => {
-    if (sizesAndPrices.length > 1) {
-      setSizesAndPrices(sizesAndPrices.filter((_, i) => i !== index));
-    }
-  };
-
   const validateForm = () => {
     if (!mainPreview) {
       toast({
@@ -101,46 +123,6 @@ export function ModalCreateReading() {
       toast({
         variant: "destructive",
         title: "Vui lòng nhập tên.",
-      });
-      return false;
-    }
-
-    if (!description.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng nhập mô tả.",
-      });
-      return false;
-    }
-
-    if (!introduction.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng nhập phần giới thiệu.",
-      });
-      return false;
-    }
-
-    if (!category.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng chọn danh mục.",
-      });
-      return false;
-    }
-
-    if (!color) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng chọn màu sắc.",
-      });
-      return false;
-    }
-
-    if (sizesAndPrices.some((sp) => !sp.size.trim() || !sp.price.trim())) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng nhập đầy đủ kích cỡ và giá.",
       });
       return false;
     }
@@ -211,32 +193,40 @@ export function ModalCreateReading() {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    const updatedDescription = await replaceBase64WithCloudUrls(
-      description,
-      handleImageUpload
-    );
-    const updatedIntroduction = await replaceBase64WithCloudUrls(
-      introduction,
-      handleImageUpload
-    );
-
     const uploadMainImage: any = await UploadService.uploadToCloudinary([
       mainPreview,
     ]);
 
+    const transformedParts = parts.map((part) => ({
+      image: part.image,
+      content: part.content,
+      part_num: part.part_num,
+      questions: part.questions.map((question) => {
+        const transformedQuestion = {
+          ...question,
+          q_type: question.q_type,
+        };
+        if (question.q_type === "MP") {
+          transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
+        } else if (question.q_type === "FB") {
+          transformedQuestion.describe_image = "";
+        }
+        return transformedQuestion;
+      }),
+    }));
+
     const body = {
+      skill: "R",
+      parts: transformedParts,
       name: name,
-      description: updatedDescription,
-      introduction: updatedIntroduction,
-      product_option: sizesAndPrices,
-      category: category,
-      color: color,
       thumbnail: uploadMainImage[0]?.url || "",
+      time: time,
     };
 
-    await ReadingService.createProduct(body);
+    const response = await ReadingService.createReading(body);
+    console.log("CHECK RESPONSE", response);
+
     setIsLoading(false);
-    window.location.href = "/?tab=product";
   };
 
   return (
@@ -334,26 +324,26 @@ export function ModalCreateReading() {
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
-              <Label htmlFor={`price`} className="text-[14.5px]">
-                Giá sản phẩm
+              <Label htmlFor={`time`} className="text-[14.5px]">
+                Thời gian làm bài
               </Label>
               <div className="w-full grid items-center gap-4 mt-1">
                 <input
-                  id={`price`}
-                  value={2}
-                  placeholder="Giá"
+                  id={`time`}
+                  value={time}
+                  type="number"
+                  min={0}
+                  max={60}
+                  onChange={(e) => setTime(Number(e.target.value))}
+                  placeholder="Thời gian làm bài"
                   className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                 />
               </div>
-              {/* <div className="w-full mt-2">
-                <ProductDescriptionEditor
-                  value={description}
-                  onChange={setDescription}
-                  title="Mô tả sản phẩm"
-                />
-              </div> */}
               <div className="mt-2">
-                <ModalCreateReadingDetail />
+                <ModalCreateReadingDetail
+                  parts={parts}
+                  onPartsUpdate={handlePartsUpdate}
+                />
               </div>
             </div>
           </div>
