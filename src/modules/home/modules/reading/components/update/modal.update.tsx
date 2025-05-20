@@ -62,6 +62,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
   const mainImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingDOM, setIsLoadingDOM] = useState<boolean>(true);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
@@ -240,7 +241,6 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       thumbnail: uploadMainImage[0]?.url || "",
       time: time,
     };
-    // console.log("CHECK BODY", JSON.stringify(body));
 
     const response = await TestService.updateReading(data?._id, body);
 
@@ -321,6 +321,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       ];
 
       setParts(updatedParts);
+      setIsLoadingDOM(false);
     }
   };
 
@@ -331,12 +332,18 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
-        >
-          <SquarePen />
-        </button>
+        {isLoadingDOM ? (
+          <div className="px-5 text-center pointer-events-none">
+            <Loader className="animate-spin" size={17} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="mx-3 flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
+          >
+            <SquarePen />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[1200px] max-h-[90vh]"

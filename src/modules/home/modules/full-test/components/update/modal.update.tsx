@@ -27,6 +27,8 @@ import { WritingService } from "@/services/writing";
 import { ModalUpdateReading } from "./reading/modal.update";
 import { ModalUpdateListening } from "./listening/modal.update";
 import { ModalUpdateWriting } from "./writing/modal.update";
+import { QuestionsService } from "@/services/questions";
+import { log } from "console";
 
 interface Question {
   q_type: "MP" | "FB";
@@ -90,15 +92,16 @@ export function ModalUpdateFullTest({
   const mainImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingDOM, setIsLoadingDOM] = useState<boolean>(true);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [readings, setReadings] = useState<any>({});
   const [listenings, setListenings] = useState<any>({});
   const [writings, setWritings] = useState<any>({});
-  const [readingUpdateData, setReadingUpdateData] = useState<any>();
-  const [listeningUpdateData, setListeningUpdateData] = useState<any>();
-  const [writingUpdateData, setWritingUpdateData] = useState<any>();
+  const [readingUpdateData, setReadingUpdateData] = useState<any>(null);
+  const [listeningUpdateData, setListeningUpdateData] = useState<any>(null);
+  const [writingUpdateData, setWritingUpdateData] = useState<any>(null);
   const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
 
   const init = async () => {
@@ -108,8 +111,6 @@ export function ModalUpdateFullTest({
       const resW = await WritingService.getWritingById(fullTestData.w_id);
 
       if (resR) {
-        console.log("Reading data:", resR);
-
         setReadings(resR);
       } else {
         setReadings({} as ReadingData);
@@ -255,62 +256,62 @@ export function ModalUpdateFullTest({
 
       const body = {
         name: name,
-        thumbnail: thumbnailUrl,
+        thumbnail: thumbnailUrl || mainPreview,
         description: description || "",
         tests: [
           {
             _id: fullTestData.r_id,
             skill: "R",
-            parts: readingUpdateData.parts,
-            name: readingUpdateData.name,
-            thumbnail: readingUpdateData.thumbnail,
-            time: readingUpdateData.time,
+            parts: readingUpdateData!.parts,
+            name: readingUpdateData!.name,
+            thumbnail: readingUpdateData!.thumbnail,
+            time: readingUpdateData!.time,
           },
           {
             _id: fullTestData.l_id,
             skill: "L",
-            parts: listeningUpdateData.parts,
-            name: listeningUpdateData.name,
-            thumbnail: listeningUpdateData.thumbnail,
-            time: listeningUpdateData.time,
+            parts: listeningUpdateData!.parts,
+            name: listeningUpdateData!.name,
+            thumbnail: listeningUpdateData!.thumbnail,
+            time: listeningUpdateData!.time,
           },
           {
             _id: fullTestData.w_id,
             skill: "W",
-            parts: writingUpdateData.parts,
-            name: writingUpdateData.name,
-            thumbnail: writingUpdateData.thumbnail,
-            time: writingUpdateData.time,
+            parts: writingUpdateData!.parts,
+            name: writingUpdateData!.name,
+            thumbnail: writingUpdateData!.thumbnail,
+            time: writingUpdateData!.time,
           },
         ],
       };
 
-      console.log("FullTest body:", body);
+      // console.log("FullTest body:", body);
 
-      console.log("FullTest data JSON:", JSON.stringify(body));
+      // console.log("FullTest data JSON:", JSON.stringify(body));
 
-      // const response = await FullTestService.updateFullTest(
-      //   fullTestData._id,
-      //   body
-      // );
+      const response = await FullTestService.updateFullTest(
+        fullTestData._id,
+        body
+      );
 
-      // if (response) {
-      //   toast({
-      //     title: "Thành công",
-      //     description: "Bài viết đã được cập nhật thành công.",
-      //   });
-      //   setMainPreview(null);
-      //   setName("");
-      //   setDescription("");
-      // }
+      if (response) {
+        toast({
+          title: "Thành công",
+          description: "Bài viết đã được cập nhật thành công.",
+        });
+        setMainPreview(null);
+        setName("");
+        setDescription("");
+      }
 
-      // window.location.href = "/?tab=full-test";
+      window.location.href = "/?tab=full-test";
     } catch (error) {
       console.error("Failed to create FullTest:", error);
       toast({
         variant: "destructive",
         title: "Lỗi",
-        description: "Không thể tạo bài viết. Vui lòng thử lại.",
+        description: "Không thể tạo bài test. Vui lòng thử lại.",
       });
     } finally {
       setIsLoading(false);
@@ -332,25 +333,342 @@ export function ModalUpdateFullTest({
     }
   };
 
-  useEffect(() => {
-    updateDOM(fullTestData);
-  }, [fullTestData]);
+  const updateDOMReading = async (readingData: ReadingData) => {
+    if (!readingData || !readingData.parts) {
+      setListeningUpdateData(null);
+      return;
+    }
+    try {
+      const [readingParts1, readingParts2, readingParts3] = await Promise.all([
+        QuestionsService.getQuestionsById(readingData.parts[0]),
+        QuestionsService.getQuestionsById(readingData.parts[1]),
+        QuestionsService.getQuestionsById(readingData.parts[2]),
+      ]);
+
+      if (!readingParts1 || !readingParts2 || !readingParts3) {
+        throw new Error("Failed to fetch one or more reading parts.");
+      }
+
+      const updatedParts = [
+        {
+          _id: readingParts1._id || "",
+          image: readingParts1.image || "",
+          content: readingParts1.content || "",
+          part_num: 1,
+          question: (readingParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (readingParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: readingParts2._id || "",
+          image: readingParts2.image || "",
+          content: readingParts2.content || "",
+          part_num: 2,
+          question: (readingParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (readingParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: readingParts3._id || "",
+          image: readingParts3.image || "",
+          content: readingParts3.content || "",
+          part_num: 3,
+          question: (readingParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (readingParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+      ];
+
+      // Transform questions for each part
+      const transformedParts = updatedParts.map((part) => ({
+        _id: part._id,
+        image: part.image,
+        content: part.content,
+        part_num: part.part_num,
+        question: part.question.map((question: any) => {
+          const transformedQuestion = { ...question };
+          if (question.q_type === "MP") {
+            transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
+          } else if (question.q_type === "FB") {
+            transformedQuestion.image = "";
+          }
+          return transformedQuestion;
+        }),
+      }));
+
+      // Prepare the body for updating reading data
+      const body = {
+        parts: transformedParts,
+        name: readingData.name || "",
+        thumbnail: readingData.thumbnail || "",
+        time: readingData.time || 60,
+        _id: readingData._id || "",
+      };
+
+      // Update state with transformed data
+      setReadingUpdateData(body);
+    } catch (error) {
+      console.error("Error in updateDOMReading:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể tải dữ liệu bài đọc. Vui lòng thử lại.",
+      });
+      setReadingUpdateData(null);
+    }
+  };
+
+  const updateDOMListening = async (listeningData: ListeningData) => {
+    if (!listeningData || !listeningData.parts) {
+      setListeningUpdateData(null);
+      return;
+    }
+
+    try {
+      // Fetch questions for each part concurrently
+      const [listeningParts1, listeningParts2, listeningParts3, listeningParts4] = await Promise.all([
+        QuestionsService.getQuestionsById(listeningData.parts[0]),
+        QuestionsService.getQuestionsById(listeningData.parts[1]),
+        QuestionsService.getQuestionsById(listeningData.parts[2]),
+        QuestionsService.getQuestionsById(listeningData.parts[3]),
+      ]);
+
+      // Validate fetched data
+      if (!listeningParts1 || !listeningParts2 || !listeningParts3 || !listeningParts4) {
+        throw new Error("Failed to fetch one or more listening parts.");
+      }
+
+      // Transform parts data
+      const updatedParts = [
+        {
+          _id: listeningParts1._id || "",
+          image: listeningParts1.image || "",
+          audio: listeningParts1.audio || "",
+          part_num: 1,
+          question: (listeningParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (listeningParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: listeningParts2._id || "",
+          image: listeningParts2.image || "",
+          audio: listeningParts2.audio || "",
+          part_num: 2,
+          question: (listeningParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (listeningParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: listeningParts3._id || "",
+          image: listeningParts3.image || "",
+          audio: listeningParts3.audio || "",
+          part_num: 3,
+          question: (listeningParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (listeningParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: listeningParts4._id || "",
+          image: listeningParts4.image || "",
+          audio: listeningParts4.audio || "",
+          part_num: 4,
+          question: (listeningParts4.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (listeningParts4.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+      ];
+
+      // Transform questions for each part
+      const transformedParts = updatedParts.map((part) => ({
+        _id: part._id,
+        image: part.image,
+        audio: part.audio,
+        part_num: part.part_num,
+        question: part.question.map((question: any) => {
+          const transformedQuestion = { ...question };
+          if (question.q_type === "MP") {
+            transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
+          } else if (question.q_type === "FB") {
+            transformedQuestion.image = "";
+          }
+          return transformedQuestion;
+        }),
+      }));
+
+      // Prepare the body for updating listening data
+      const body = {
+        parts: transformedParts,
+        name: listeningData.name || "",
+        thumbnail: listeningData.thumbnail || "",
+        time: listeningData.time || 60,
+        _id: listeningData._id || "",
+      };
+
+      // Update state with transformed data
+      setListeningUpdateData(body);
+    } catch (error) {
+      console.error("Error in updateDOMListening:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể tải dữ liệu bài nghe. Vui lòng thử lại.",
+      });
+      setListeningUpdateData(null);
+    }
+  };
+
+  const updateDOMWriting = async (writingData: WritingData) => {
+    if (!writingData || !writingData.parts) {
+      setListeningUpdateData(null);
+      return;
+    }
+
+    try {
+      const [writingParts1, writingParts2] = await Promise.all([
+        QuestionsService.getQuestionsById(writingData.parts[0]),
+        QuestionsService.getQuestionsById(writingData.parts[1]),
+      ]);
+
+      const updatedParts = [
+        {
+          _id: writingData.parts[0] || "",
+          image: writingParts1.image || "",
+          content:
+            writingParts1.content || writingParts1.question?.[0]?.content || "",
+          part_num: 1,
+          questions: (writingParts1.question || []).map((q: any) => ({
+            _id: q._id || "",
+            q_type: "W" as const,
+            image: q.image || "",
+            topic: q.topic || "",
+          })),
+          tempQuestions: [],
+        },
+        {
+          _id: writingData.parts[1] || "",
+          image: writingParts2.image || "",
+          content:
+            writingParts2.content || writingParts2.question?.[0]?.content || "",
+          part_num: 2,
+          questions: (writingParts2.question || []).map((q: any) => ({
+            _id: q._id || "",
+            q_type: "W" as const,
+            image: q.image,
+            topic: q.topic || "",
+          })),
+          tempQuestions: [],
+        },
+      ];
+
+      const transformedParts = await Promise.all(
+        updatedParts.map(async (part) => {
+          const transformedQuestions = await Promise.all(
+            part.questions.map(async (question: any) => ({
+              _id: question._id,
+              part_id: part._id,
+              q_type: "W" as const,
+              image: question.image,
+              topic: question.topic,
+            }))
+          );
+
+          return {
+            _id: part._id,
+            part_num: part.part_num,
+            question: transformedQuestions,
+          };
+        })
+      );
+
+      const body = {
+        // skill: "W",
+        parts: transformedParts,
+        name: writingData.name || "",
+        thumbnail: writingData.thumbnail || "",
+        time: writingData.time || 60,
+        _id: writingData._id || "",
+      };
+
+      // Update state with transformed data
+      setWritingUpdateData(body);
+      setIsLoadingDOM(false);
+      console.log("Writing update data:", body);
+
+    } catch (error) {
+      console.error("Failed to fetch writing parts:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể tải dữ liệu phần bài viết.",
+      });
+    }
+  };
 
   useEffect(() => {
-    console.log("Reading update data:", readingUpdateData);
-    console.log("Listening update data:", listeningUpdateData);
-    console.log("Writing update data:", writingUpdateData);
-  }, [readingUpdateData, listeningUpdateData, writingUpdateData]);
+    updateDOM(fullTestData);
+    updateDOMReading(readings);
+    updateDOMListening(listenings);
+    updateDOMWriting(writings);
+  }, [fullTestData, readings, listenings, writings]);
+
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
-        >
-          <SquarePen />
-        </button>
+        {isLoadingDOM ? (
+          <div className="px-5 text-center pointer-events-none">
+            <Loader className="animate-spin" size={17} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="mx-3 flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
+          >
+            <SquarePen />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[1200px] max-h-[90vh]"
@@ -368,7 +686,6 @@ export function ModalUpdateFullTest({
             </span>
           </DialogDescription>
         </DialogHeader>
-
         <div className="w-full grid grid-cols-3 gap-8">
           <div className="col-span-1">
             <div className="overflow-y-auto max-h-[70vh] scroll-bar-style">
@@ -501,6 +818,6 @@ export function ModalUpdateFullTest({
           </div>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }

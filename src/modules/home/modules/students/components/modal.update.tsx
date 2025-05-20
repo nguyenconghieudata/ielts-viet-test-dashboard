@@ -170,8 +170,6 @@ export function ModalUpdateUser({ data }: { data: UserData }) {
       try {
         const response = await UserService.getUserAnswerById(userData._id);
 
-        console.log("========= Response:", response);
-
         if (response) {
           setSubmissions(response);
         }

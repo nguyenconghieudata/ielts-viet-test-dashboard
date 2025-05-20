@@ -54,6 +54,7 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
   const mainImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingDOM, setIsLoadingDOM] = useState<boolean>(true);
   const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
@@ -210,6 +211,9 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
     if (!validateForm()) return;
     setIsLoading(true);
 
+    console.log('CHECK PART: ', parts);
+
+
     try {
       const thumbnailUrl = mainPreview?.startsWith("data:image")
         ? await handleImageUpload(mainPreview)
@@ -243,7 +247,6 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
         time: time,
       };
 
-      // console.log("CHECK BODY", body);
 
       const response = await WritingService.updateWriting(data._id, body);
       if (response) {
@@ -312,7 +315,7 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
             _id: q._id || "",
             q_type: "W" as const,
             image: q.image || "",
-            topic: q.topic || "",
+            topic: q.content || "",
           })),
           tempQuestions: [],
         },
@@ -326,14 +329,14 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
             _id: q._id || "",
             q_type: "W" as const,
             image: q.image,
-            topic: q.topic || "",
+            topic: q.content || "",
           })),
           tempQuestions: [],
         },
       ];
 
       setParts(updatedParts);
-      console.log("CHECK WRITING PARTS", updatedParts);
+      setIsLoadingDOM(false);
     } catch (error) {
       console.error("Failed to fetch writing parts:", error);
       toast({
@@ -351,12 +354,18 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
-        >
-          <SquarePen />
-        </button>
+        {isLoadingDOM ? (
+          <div className="px-5 text-center pointer-events-none">
+            <Loader className="animate-spin" size={17} />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="mx-3 flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
+          >
+            <SquarePen />
+          </button>
+        )}
       </DialogTrigger>
       <DialogContent
         className="sm:max-w-[1200px] max-h-[90vh]"

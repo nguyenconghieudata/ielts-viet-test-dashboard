@@ -158,13 +158,13 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             image: answer.image || "",
           })
         ) || [
-          {
-            question_id: "",
-            answer: [],
-            topic: "",
-            image: "",
-          },
-        ],
+            {
+              question_id: "",
+              answer: [],
+              topic: "",
+              image: "",
+            },
+          ],
         is_complete: readingData.result[0]?.is_complete || null,
       },
       {
@@ -178,13 +178,13 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             image: answer.image || "",
           })
         ) || [
-          {
-            question_id: "",
-            answer: [],
-            topic: "",
-            image: "",
-          },
-        ],
+            {
+              question_id: "",
+              answer: [],
+              topic: "",
+              image: "",
+            },
+          ],
         is_complete: readingData.result[1]?.is_complete || null,
       },
     ];
@@ -241,11 +241,10 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           {parts.map((part, index) => (
             <button
               key={part.part_id}
-              className={`border rounded-xl px-5 py-1 ${
-                activePart === index + 1
-                  ? "border-indigo-600 bg-indigo-600 text-white"
-                  : "border-gray-200"
-              }`}
+              className={`border rounded-xl px-5 py-1 ${activePart === index + 1
+                ? "border-indigo-600 bg-indigo-600 text-white"
+                : "border-gray-200"
+                }`}
               onClick={() => setActivePart(index + 1)}
             >
               Writing Task {index + 1}
@@ -261,25 +260,35 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                 </h1>
                 <div className="mb-4 text-sm lg:text-[17px] font-semibold border-double border-2 border-black p-4 text-justify w-full">
                   {activePart === 1
-                    ? parts[0].user_answers[0].topic
-                    : parts[1].user_answers[0].topic}
+                    ?
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: (parts[0].user_answers[0].topic || "").replace(/\\/g, ""),
+                      }}
+                    />
+                    :
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: (parts[1].user_answers[0].topic || "").replace(/\\/g, ""),
+                      }}
+                    />}
                 </div>
                 <div>
                   {(activePart === 1
                     ? parts[0].user_answers[0].image
                     : parts[1].user_answers[0].image) && (
-                    <Image
-                      src={
-                        activePart === 1
-                          ? parts[0].user_answers[0].image
-                          : parts[1].user_answers[0].image
-                      }
-                      alt=""
-                      width={1000}
-                      height={1000}
-                      className="w-full h-full"
-                    />
-                  )}
+                      <Image
+                        src={
+                          activePart === 1
+                            ? parts[0].user_answers[0].image
+                            : parts[1].user_answers[0].image
+                        }
+                        alt=""
+                        width={1000}
+                        height={1000}
+                        className="w-full h-full"
+                      />
+                    )}
                 </div>
               </div>
             </div>
@@ -297,7 +306,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                       ? parts[0].user_answers[0].answer[0]
                       : parts[1].user_answers[0].answer[0]
                   }
-                  placeholder="Bài nộp"
+                  placeholder="Bài làm học viên"
                   className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                   rows={15}
                 />

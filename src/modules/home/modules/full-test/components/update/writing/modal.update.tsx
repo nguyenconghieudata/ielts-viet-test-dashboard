@@ -342,7 +342,6 @@ export function ModalUpdateWriting({
       ];
 
       setParts(updatedParts);
-      console.log("CHECK WRITING PARTS", updatedParts);
     } catch (error) {
       console.error("Failed to fetch writing parts:", error);
       toast({

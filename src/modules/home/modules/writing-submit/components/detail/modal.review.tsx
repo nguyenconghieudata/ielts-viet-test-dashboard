@@ -155,7 +155,7 @@ export function ModalReview({
           </DialogDescription>
         </DialogHeader>
         <div className="w-full grid grid-cols-1 gap-8">
-          <div className="overflow-y-auto max-h-[70vh] scroll-bar-style">
+          <div className="overflow-y-auto max-h-[60vh] scroll-bar-style">
             <div className="flex flex-col justify-start items-start gap-2 overflow-auto h-screen max-h-[80vh] scroll-bar-style">
               <Label htmlFor="overall" className="text-[16px] mt-2">
                 Overall

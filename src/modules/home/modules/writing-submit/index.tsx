@@ -56,9 +56,11 @@ export default function WritingSubmit() {
       const res = await WritingService.getAllSubmit();
       if (res && res?.data?.length > 0) {
         render(res.data);
+        setIsLoading(false);
       } else {
         setData([]);
         setCurrenData([]);
+        setIsLoading(false);
         setQuestionCounts({});
       }
     } catch (error) {
@@ -66,8 +68,6 @@ export default function WritingSubmit() {
       setData([]);
       setCurrenData([]);
       setQuestionCounts({});
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -82,7 +82,7 @@ export default function WritingSubmit() {
           <div className="flex items-center flex-1">
             <h5>
               <span className="text-gray-800 text-[20px] font-bold">
-                DANH SÁCH BÀI VIẾT ĐÃ NỘP{""}
+                DANH SÁCH BÀI VIẾT ĐÃ NỘP{" "}
                 <span className="text-indigo-600">({data?.length})</span>
               </span>
             </h5>
@@ -189,11 +189,10 @@ export default function WritingSubmit() {
                       <li key={index} onClick={() => selectPage(item)}>
                         <a
                           href="#"
-                          className={`${
-                            item === currenPage
-                              ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
-                              : "bg-white"
-                          } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
+                          className={`${item === currenPage
+                            ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
+                            : "bg-white"
+                            } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
                         >
                           {item}
                         </a>

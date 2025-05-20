@@ -60,34 +60,27 @@ export function ModalUpdateWritingDetail({
       const updatedParts = parts.map((part) =>
         part.part_num === activePart
           ? {
-              ...part,
-              content,
-              questions: part.questions.length
-                ? [
-                    {
-                      ...part.questions[0],
-                      image: part.questions[0].image,
-                      q_type: "W" as const,
-                      topic: content,
-                    } as Question,
-                  ]
-                : [
-                    {
-                      q_type: "W" as const,
-                      image: part.questions[0].image,
-                      topic: content,
-                    } as Question,
-                  ],
-            }
+            ...part,
+            content,
+            questions: part.questions.length
+              ? [
+                {
+                  ...part.questions[0],
+                  image: part.questions[0].image,
+                  q_type: "W" as const,
+                  topic: content,
+                } as Question,
+              ]
+              : [
+                {
+                  q_type: "W" as const,
+                  image: part.questions[0].image,
+                  topic: content,
+                } as Question,
+              ],
+          }
           : part
       );
-
-      console.log("check parts:", parts);
-
-      console.log("Updated parts ========:", updatedParts);
-
-      console.log("image 1 preview:", image1Preview);
-      console.log("image 2 preview:", image2Preview);
 
       onPartsUpdate(updatedParts);
     },
@@ -182,24 +175,24 @@ export function ModalUpdateWritingDetail({
       const updatedParts = parts.map((part) =>
         part.part_num === activePart
           ? {
-              ...part,
-              image: imageData,
-              questions: part.questions.length
-                ? [
-                    {
-                      ...part.questions[0],
-                      image: imageData,
-                      q_type: "W" as const,
-                    } as Question,
-                  ]
-                : [
-                    {
-                      q_type: "W" as const,
-                      image: imageData,
-                      topic: part.content,
-                    } as Question,
-                  ],
-            }
+            ...part,
+            image: imageData,
+            questions: part.questions.length
+              ? [
+                {
+                  ...part.questions[0],
+                  image: imageData,
+                  q_type: "W" as const,
+                } as Question,
+              ]
+              : [
+                {
+                  q_type: "W" as const,
+                  image: imageData,
+                  topic: part.content,
+                } as Question,
+              ],
+          }
           : part
       );
       onPartsUpdate(updatedParts);
@@ -248,12 +241,12 @@ export function ModalUpdateWritingDetail({
         updatedParts = updatedParts.map((p) =>
           p.part_num === part.part_num
             ? {
-                ...p,
-                image: partImageUrl,
-                content: partContent,
-                questions: [newQuestion],
-                tempQuestions: [],
-              }
+              ...p,
+              image: partImageUrl,
+              content: partContent,
+              questions: [newQuestion],
+              tempQuestions: [],
+            }
             : p
         );
       }
@@ -264,8 +257,6 @@ export function ModalUpdateWritingDetail({
         title: "Đã lưu câu hỏi",
         description: "Tất cả câu hỏi và hình ảnh đã được lưu thành công.",
       });
-
-      console.log("Updated parts:", updatedParts);
 
       if (dialogCloseRef.current) {
         dialogCloseRef.current.click();
@@ -326,11 +317,10 @@ export function ModalUpdateWritingDetail({
             {parts.map((part) => (
               <button
                 key={part.part_num}
-                className={`border rounded-xl px-5 py-1 ${
-                  activePart === part.part_num
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-200"
-                }`}
+                className={`border rounded-xl px-5 py-1 ${activePart === part.part_num
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-gray-200"
+                  }`}
                 onClick={() => setActivePart(part.part_num)}
               >
                 Passage {part.part_num}
@@ -356,8 +346,8 @@ export function ModalUpdateWritingDetail({
                       className="hidden"
                     />
                     {(activePart === 1 ? !image1Preview : !image2Preview) &&
-                    !currentPart?.image &&
-                    !currentPart?.questions[0]?.image ? (
+                      !currentPart?.image &&
+                      !currentPart?.questions[0]?.image ? (
                       <div
                         onClick={handleUpdateMainImage}
                         className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white px-5 py-16 text-sm font-medium text-gray-900 hover:bg-gray-50 hover:text-primary-700 cursor-pointer"
@@ -386,13 +376,13 @@ export function ModalUpdateWritingDetail({
                             src={
                               activePart === 1
                                 ? image1Preview ||
-                                  currentPart?.image ||
-                                  currentPart?.questions[0]?.image ||
-                                  ""
+                                currentPart?.image ||
+                                currentPart?.questions[0]?.image ||
+                                ""
                                 : image2Preview ||
-                                  currentPart?.image ||
-                                  currentPart?.questions[0]?.image ||
-                                  ""
+                                currentPart?.image ||
+                                currentPart?.questions[0]?.image ||
+                                ""
                             }
                             alt="main-preview"
                             className="w-full h-full object-cover rounded-md mt-2 border border-gray-200"
