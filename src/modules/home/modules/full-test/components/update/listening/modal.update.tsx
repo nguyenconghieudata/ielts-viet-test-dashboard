@@ -384,12 +384,12 @@ export function ModalUpdateListening({
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Cập nhật bài đọc</span>
+            <span className="!text-[20px]">Cập nhật bài nghe</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Cập nhật bài đọc</strong> để
+              Điền thông tin bài nghe và nhấn{" "}
+              <strong className="text-indigo-600">Cập nhật bài nghe</strong> để
               lưu thay đổi.
             </span>
           </DialogDescription>
