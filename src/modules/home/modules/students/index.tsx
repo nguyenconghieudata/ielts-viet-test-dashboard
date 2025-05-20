@@ -2,14 +2,14 @@
 "use client";
 
 import Image from "next/image";
-import { ModalCreateReading } from "./components/create/modal.create";
 import { useEffect, useState } from "react";
-import { ReadingService } from "@/services/reading";
 import { Loader } from "lucide-react";
 import { IMAGES } from "@/utils/image";
-import { ModalUpdateReading } from "./components/update/modal.update";
+import { UserService } from "@/services/user";
+import { ModalCreateUser } from "./components/modal.create";
+import { ModalUpdateUser } from "./components/modal.update";
 
-export default function Reading() {
+export default function Students() {
   const COUNT = 5;
 
   const [data, setData] = useState([]);
@@ -17,9 +17,6 @@ export default function Reading() {
   const [totalPage, setTotalPage] = useState(0);
   const [currenPage, setCurrenPage] = useState(1);
   const [currenData, setCurrenData] = useState([]);
-  const [questionCounts, setQuestionCounts] = useState<Record<string, number>>(
-    {}
-  );
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -42,7 +39,7 @@ export default function Reading() {
 
   const render = (rawData: any) => {
     const filteredData = rawData.filter(
-      (item: any) => item.thumbnail !== "" && !item.deleted_at
+      (item: any) => item.thumbnail !== null && !item.deleted_at
     );
     setData(filteredData);
     setTotalPage(Math.ceil(filteredData.length / COUNT));
@@ -53,19 +50,17 @@ export default function Reading() {
   const init = async () => {
     try {
       setIsLoading(true);
-      const res = await ReadingService.getAll();
+      const res = await UserService.getAll();
       if (res && res?.data?.length > 0) {
         render(res.data);
       } else {
         setData([]);
         setCurrenData([]);
-        setQuestionCounts({});
       }
     } catch (error) {
-      console.error("Failed to fetch readings:", error);
+      console.error("Failed to fetch users:", error);
       setData([]);
       setCurrenData([]);
-      setQuestionCounts({});
     } finally {
       setIsLoading(false);
     }
@@ -82,13 +77,13 @@ export default function Reading() {
           <div className="flex items-center flex-1">
             <h5>
               <span className="text-gray-800 text-[20px] font-bold">
-                DANH SÁCH BÀI ĐỌC{" "}
+                DANH SÁCH HỌC VIÊN{" "}
                 <span className="text-indigo-600">({data?.length})</span>
               </span>
             </h5>
           </div>
           <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-            <ModalCreateReading />
+            <ModalCreateUser />
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">
@@ -99,7 +94,7 @@ export default function Reading() {
           ) : currenData.length === 0 ? (
             <div className="col-span-2 text-center w-full flex justify-center items-center py-4">
               <p className="text-gray-500 text-lg">
-                Không tìm thấy bài đọc nào.
+                Không tìm thấy học viên nào.
               </p>
             </div>
           ) : (
@@ -108,20 +103,14 @@ export default function Reading() {
                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                   <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400">
                     <tr>
-                      <th scope="col" className="w-64 px-4 py-3">
-                        Tên bài đọc
+                      <th scope="col" className="w-60 px-4 py-3">
+                        Tên học viên
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        Passage
+                        Email
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        Câu hỏi
-                      </th>
-                      <th scope="col" className="w-32 px-4 py-3">
-                        Thời gian làm bài
-                      </th>
-                      <th scope="col" className="w-32 px-4 py-3">
-                        Đã làm
+                        Bài test đã làm
                       </th>
                       <th scope="col" className="w-24 px-4 py-3">
                         Chi tiết
@@ -136,30 +125,24 @@ export default function Reading() {
                       >
                         <td className="w-full px-4 py-2 grid grid-cols-12 gap-3 items-center">
                           <Image
-                            src={item?.thumbnail || IMAGES.LOGO}
+                            src={item?.avatar || IMAGES.LOGO}
                             alt="img"
-                            className="w-32 h-20 rounded-md object-cover col-span-3 border border-gray-300"
+                            className="w-20 h-20 rounded-full object-cover col-span-3 border border-gray-300"
                             width={100}
                             height={100}
                           />
                           <span className="w-full col-span-9 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                            {item?.name}
+                            {item?.user_name}
                           </span>
                         </td>
-                        <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {item.parts.length} phần
+                        <td className="w-32 px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.email}
                         </td>
-                        <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {item.number_of_questions} câu
-                        </td>
-                        <td className="w-32 px-14 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {item.time} phút
-                        </td>
-                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
                         </td>
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          <ModalUpdateReading data={item} />
+                          <ModalUpdateUser data={item} />
                         </td>
                       </tr>
                     ))}

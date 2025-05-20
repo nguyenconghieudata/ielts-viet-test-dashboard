@@ -58,6 +58,12 @@ export function QuestionList({
                     >
                       Sửa
                     </button>
+                    <button
+                      onClick={() => onDelete(index)}
+                      className="text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Xóa
+                    </button>
                   </div>
                 </div>
                 <div className="mt-2 space-y-2">

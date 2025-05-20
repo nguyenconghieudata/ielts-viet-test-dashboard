@@ -19,87 +19,52 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ReadingService } from "@/services/reading";
-import { ModalUpdateReadingDetail } from "./modal.update.detail";
-import { QuestionsService } from "@/services/questions";
-import { TestService } from "@/services/test";
+import { UserService } from "@/services/user";
+import { ModalHistoryUser } from "./modal.history";
 
-interface Question {
+interface UserData {
   _id: string;
-  part_id: string;
-  q_type: "MP" | "FB";
-  question?: string;
-  choices?: string[];
-  answer?: string[];
-  start_passage?: string;
-  end_passage?: string;
-  isMultiple?: boolean;
-  image?: string;
-}
-
-interface PartDetails {
-  _id: string;
-  image: string;
-  content: string;
-  part_num: number;
-  question: Question[];
-  tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
-}
-
-interface ReadingData {
+  user_name: string;
+  avatar: string;
+  email: string;
+  password: string;
   created_at: string;
-  name: string;
-  parts: string[];
-  thumbnail: string;
-  time: number;
-  type: string;
-  _id: string;
 }
 
-export function ModalUpdateReading({ data }: { data: ReadingData }) {
+interface ResultData {
+  type: string;
+  part_id: string;
+  user_answers: Object[];
+  correct_count: number;
+  incorrect_count: number;
+  pass_count: number;
+  is_complete: null;
+}
+
+interface SubmissionData {
+  _id: string;
+  user_id: string;
+  user_email: string;
+  test_id: string;
+  test_type: string;
+  result: ResultData[];
+  user_avatar: string;
+  user_name: string;
+  test_name: string;
+  created_at: string;
+}
+
+export function ModalUpdateUser({ data }: { data: UserData }) {
   const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
-  const [time, setTime] = useState<number>(0);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
-
-  const [parts, setParts] = useState<PartDetails[]>([
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 1,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 2,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 3,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-  ]);
-
-  const handlePartsUpdate = (updatedParts: PartDetails[]) => {
-    setParts(updatedParts);
-  };
+  const [submissions, setSubmissions] = useState<SubmissionData[]>([]);
 
   const handleMainImageChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -148,66 +113,24 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       return false;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email)) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập email hợp lệ.",
+      });
+      return false;
+    }
+
+    if (!password.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập mật khẩu.",
+      });
+      return false;
+    }
+
     return true;
-  };
-
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      if (
-        uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-      ) {
-        return uploadResponse[0]?.secure_url;
-      } else {
-        console.error("Upload failed or response is not as expected");
-        return "";
-      }
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
-
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    return matches.map((match) => match[1]);
-  };
-
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-
-    return updatedContent;
-  };
-
-  const base64ToFile = (base64String: string): File => {
-    const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], "image.png", { type: mime });
   };
 
   const handleSubmit = async () => {
@@ -218,109 +141,43 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       mainPreview,
     ]);
 
-    const transformedParts = parts.map((part) => ({
-      _id: part._id,
-      image: part.image,
-      content: part.content,
-      part_num: part.part_num,
-      question: part.question.map((question) => {
-        const transformedQuestion = { ...question };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
-        }
-        return transformedQuestion;
-      }),
-    }));
-
     const body = {
-      parts: transformedParts,
-      name: name,
-      thumbnail: uploadMainImage[0]?.url || "",
-      time: time,
+      user_name: name,
+      email: email,
+      avatar: uploadMainImage[0]?.url || "",
     };
-    // console.log("CHECK BODY", JSON.stringify(body));
 
-    const response = await TestService.updateReading(data?._id, body);
+    const response = await UserService.updateUser(data?._id, body);
 
     setIsLoading(false);
-    window.location.href = "/?tab=reading";
+    window.location.href = "/?tab=students";
   };
 
   const handleDelete = async () => {
     setIsLoadingForDelete(true);
-    const response = await ReadingService.deleteReading(data?._id);
+    const response = await UserService.deleteUser(data?._id);
     setIsLoadingForDelete(false);
-    window.location.href = "/?tab=reading";
+    window.location.href = "/?tab=students";
   };
 
-  const updateDOM = async (readingData: ReadingData) => {
-    if (readingData) {
-      setName(readingData.name);
-      setTime(readingData.time);
-      setMainPreview(readingData.thumbnail);
+  const updateDOM = async (userData: UserData) => {
+    if (userData) {
+      setName(userData.user_name);
+      setEmail(userData.email);
+      setMainPreview(userData.avatar);
+      setPassword(userData.password);
 
-      const readingParts1 = await QuestionsService.getQuestionsById(
-        readingData.parts[0]
-      );
+      try {
+        const response = await UserService.getUserAnswerById(userData._id);
 
-      const readingParts2 = await QuestionsService.getQuestionsById(
-        readingData.parts[1]
-      );
-      const readingParts3 = await QuestionsService.getQuestionsById(
-        readingData.parts[2]
-      );
+        console.log("========= Response:", response);
 
-      const updatedParts = [
-        {
-          _id: readingParts1._id,
-          image: readingParts1.image || "",
-          content: readingParts1.content || "",
-          part_num: 1,
-          question: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts2._id,
-          image: readingParts2.image || "",
-          content: readingParts2.content || "",
-          part_num: 2,
-          question: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts3._id,
-          image: readingParts3.image || "",
-          content: readingParts3.content || "",
-          part_num: 3,
-          question: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-      ];
-
-      setParts(updatedParts);
+        if (response) {
+          setSubmissions(response);
+        }
+      } catch (error) {
+        console.error("Error fetching user answers:", error);
+      }
     }
   };
 
@@ -344,13 +201,12 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Cập nhật bài đọc</span>
+            <span className="!text-[20px]">Cập nhật thông tin học viên</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Cập nhật bài đọc</strong> để
-              lưu thay đổi.
+              Cập nhật thông tin học viên và nhấn{" "}
+              <strong className="text-indigo-600">Lưu</strong> để lưu thay đổi.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -412,38 +268,43 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           <div className="col-span-2">
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
               <Label htmlFor="description" className="text-[14.5px]">
-                Tên bài đọc
+                Tên học viên
               </Label>
               <div className="w-full grid items-center gap-4">
                 <textarea
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên bài đọc"
+                  placeholder="Tên học viên"
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
-              <Label htmlFor={`time`} className="text-[14.5px]">
-                Thời gian làm bài
+              <Label htmlFor="description" className="text-[14.5px]">
+                Email học viên
               </Label>
-              <div className="w-full grid items-center gap-4 mt-1">
-                <input
-                  id={`time`}
-                  value={time}
-                  type="number"
-                  min={0}
-                  max={60}
-                  onChange={(e) => setTime(Number(e.target.value))}
-                  placeholder="Thời gian làm bài"
-                  className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                />
+              <div className="w-full grid items-center gap-4">
+                <textarea
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email học viên"
+                  className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
+                ></textarea>
               </div>
-              <div className="mt-2">
-                <ModalUpdateReadingDetail
-                  parts={parts}
-                  onPartsUpdate={handlePartsUpdate}
-                />
+              <Label htmlFor="description" className="text-[14.5px]">
+                Mật khẩu
+              </Label>
+              <div className="w-full grid items-center gap-4">
+                <textarea
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mật khẩu"
+                  className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
+                ></textarea>
               </div>
+
+              <ModalHistoryUser data={submissions} />
             </div>
           </div>
         </div>
@@ -474,7 +335,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
               onClick={handleSubmit}
               className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
             >
-              Cập nhật bài đọc
+              Lưu
               {isLoading && <Loader className="animate-spin" size={17} />}
             </button>
           </div>

@@ -4,17 +4,22 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Loader } from "lucide-react";
-import { AccountService } from "@/services/account";
-import { Button } from "@/components/ui/button";
+import { IMAGES } from "@/utils/image";
+import { ModalCreateFullTest } from "./components/create/modal.create";
+import { FullTestService } from "@/services/full-test";
+import { ModalUpdateFullTest } from "./components/update/modal.update";
 
-export default function Customer() {
-  const COUNT = 6;
+export default function FullTest() {
+  const COUNT = 5;
 
-  const [data, setData] = useState([] as any);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [totalPage, setTotalPage] = useState<number>(0);
-  const [currenPage, setCurrenPage] = useState<any>(1 as any);
-  const [currenData, setCurrenData] = useState<any>([] as any);
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalPage, setTotalPage] = useState(0);
+  const [currenPage, setCurrenPage] = useState(1);
+  const [currenData, setCurrenData] = useState([]);
+  const [questionCounts, setQuestionCounts] = useState<Record<string, number>>(
+    {}
+  );
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -35,20 +40,33 @@ export default function Customer() {
     }
   };
 
-  const render = (data: any) => {
-    setData(data);
-    setTotalPage(Math.ceil(data.length / COUNT));
+  const render = (rawData: any) => {
+    const filteredData = rawData.filter(
+      (item: any) => item.thumbnail !== "" && !item.deleted_at
+    );
+    setData(filteredData);
+    setTotalPage(Math.ceil(filteredData.length / COUNT));
     setCurrenPage(1);
-    setCurrenData(data.slice(0, COUNT));
+    setCurrenData(filteredData.slice(0, COUNT));
   };
 
   const init = async () => {
-    const res = await AccountService.getAll();
-    if (res && res.data.length > 0) {
-      render(res.data);
-      setIsLoading(false);
-    } else {
+    try {
+      setIsLoading(true);
+      const res = await FullTestService.getAll();
+      if (res && res?.data?.length > 0) {
+        render(res.data);
+      } else {
+        setData([]);
+        setCurrenData([]);
+        setQuestionCounts({});
+      }
+    } catch (error) {
+      console.error("Failed to fetch writings:", error);
       setData([]);
+      setCurrenData([]);
+      setQuestionCounts({});
+    } finally {
       setIsLoading(false);
     }
   };
@@ -57,8 +75,6 @@ export default function Customer() {
     init();
   }, []);
 
-  useEffect(() => {}, [totalPage, isLoading, currenData, currenPage]);
-
   return (
     <section className="p-4">
       <div className="relative overflow-hidden">
@@ -66,21 +82,24 @@ export default function Customer() {
           <div className="flex items-center flex-1">
             <h5>
               <span className="text-gray-800 text-[20px] font-bold">
-                DANH SÁCH KHÁCH HÀNG{" "}
+                DANH SÁCH BÀI FULL TEST{" "}
                 <span className="text-indigo-600">({data?.length})</span>
               </span>
             </h5>
           </div>
+          <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
+            <ModalCreateFullTest />
+          </div>
         </div>
-        <div className="h-[620px] flex flex-col justify-between">
+        <div className="h-[640px] flex flex-col justify-between">
           {isLoading ? (
-            <div className="w-full flex justify-center items-center pt-60">
-              <Loader className="animate-spin" size={48} />
+            <div className="w-full flex justify-center items-center pt-72">
+              <Loader className="animate-spin text-indigo-600" size={36} />
             </div>
           ) : currenData.length === 0 ? (
             <div className="col-span-2 text-center w-full flex justify-center items-center py-4">
               <p className="text-gray-500 text-lg">
-                Không tìm thấy khách hàng nào.
+                Không tìm thấy bài viết nào.
               </p>
             </div>
           ) : (
@@ -89,70 +108,49 @@ export default function Customer() {
                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                   <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400">
                     <tr>
-                      <th scope="col" className="w-60 px-4 py-3">
-                        Tên Khách Hàng
+                      <th scope="col" className="w-64 px-4 py-3">
+                        Tên bài test
                       </th>
-                      <th scope="col" className="!w-28 px-4 py-3">
-                        Email
-                      </th>
-                      <th scope="col" className="w-60 px-4 py-3">
-                        Địa chỉ
+                      <th scope="col" className="w-80 px-4 py-3">
+                        Description
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        Số điện thoại
+                        Đã làm
                       </th>
-
                       <th scope="col" className="w-24 px-4 py-3">
-                        Đơn hàng
+                        Chi tiết
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currenData?.map((item: any, index: any) => {
-                      return (
-                        <tr
-                          key={index}
-                          className={`${
-                            item?.deleted_at ? "hidden" : ""
-                          } border-b border-l border-r dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700`}
-                        >
-                          <td className="w-60 px-4 py-4 flex items-center">
-                            <Image
-                              src={item?.avatar}
-                              alt="img"
-                              className="w-10 h-10 mr-3 object-cover rounded-full border border-gray-300"
-                              width={1000}
-                              height={1000}
-                            />
-                            <span className="text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                              {item?.name}
-                            </span>
-                          </td>
-                          <td className="!w-28 px-4 py-4">
-                            <span className="text-[14px] bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                              {item?.email}
-                            </span>
-                          </td>
-                          <td className="w-60 px-4 py-4">
-                            <span className="text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                              {!item?.address ||
-                              !item?.wardName ||
-                              !item?.districtName ||
-                              !item?.provinceName
-                                ? "Chưa cập nhật."
-                                : `${item?.address}, ${item?.wardName}, ${item?.districtName}, ${item?.provinceName}`}
-                            </span>
-                          </td>
-                          <td className="w-32 text-[14px] px-4 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            {!item?.phone ? "Chưa cập nhật." : `${item?.phone}`}
-                          </td>
-
-                          <td className="w-24 text-[14px] px-4 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            {item?.number_orders} đơn
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {currenData.map((item: any, index: number) => (
+                      <tr
+                        key={index}
+                        className="border-b border-l border-r dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <td className="px-4 py-2 grid grid-cols-12 gap-3 items-center">
+                          <Image
+                            src={item?.thumbnail || IMAGES.LOGO}
+                            alt="img"
+                            className="w-32 h-20 rounded-md object-cover col-span-5 border border-gray-300"
+                            width={100}
+                            height={100}
+                          />
+                          <span className="w-full col-span-7 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
+                            {item?.name}
+                          </span>
+                        </td>
+                        <td className="w-80 px-3 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.description.slice(0, 85)}...
+                        </td>
+                        <td className="w-32 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          0
+                        </td>
+                        <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          <ModalUpdateFullTest fullTestData={item} />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -165,7 +163,7 @@ export default function Customer() {
                     <button
                       onClick={prevPage}
                       disabled={currenPage === 1}
-                      className="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                      className="cursor-pointer flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                       <span className="sr-only">Previous</span>
                       <svg
@@ -183,23 +181,21 @@ export default function Customer() {
                       </svg>
                     </button>
                   </li>
-                  {Array.from({ length: totalPage }, (_, i) => i + 1)?.map(
-                    (item: any, index: any) => {
-                      return (
-                        <li key={index} onClick={() => selectPage(item)}>
-                          <a
-                            href="#"
-                            className={`${
-                              item === currenPage
-                                ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
-                                : "bg-white"
-                            } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
-                          >
-                            {item}
-                          </a>
-                        </li>
-                      );
-                    }
+                  {Array.from({ length: totalPage }, (_, i) => i + 1).map(
+                    (item, index) => (
+                      <li key={index} onClick={() => selectPage(item)}>
+                        <a
+                          href="#"
+                          className={`${
+                            item === currenPage
+                              ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
+                              : "bg-white"
+                          } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
+                        >
+                          {item}
+                        </a>
+                      </li>
+                    )
                   )}
                   <li>
                     <button

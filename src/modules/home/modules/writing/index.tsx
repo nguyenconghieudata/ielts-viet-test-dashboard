@@ -2,31 +2,24 @@
 "use client";
 
 import Image from "next/image";
-import { ModalCreateBlog } from "./modal.create";
-import { ModalUpdateBlog } from "./modal.update";
 import { useEffect, useState } from "react";
 import { Loader } from "lucide-react";
-import { BlogService } from "@/services/blog";
-import { HELPER } from "@/utils/helper";
+import { IMAGES } from "@/utils/image";
+import { ModalCreateWriting } from "./components/create/modal.create";
+import { ModalUpdateWriting } from "./components/update/modal.update";
+import { WritingService } from "@/services/writing";
 
-export interface Blog {
-  _id: string;
-  title: string;
-  content: string;
-  tag: string;
-  author: string;
-  thumbnail: string;
-  created_at: string;
-}
-
-export default function Blog() {
+export default function Writing() {
   const COUNT = 5;
 
-  const [data, setData] = useState<Blog[]>([] as any);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [totalPage, setTotalPage] = useState<number>(0);
-  const [currenPage, setCurrenPage] = useState<any>(1 as any);
-  const [currenData, setCurrenData] = useState<any>([] as any);
+  const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalPage, setTotalPage] = useState(0);
+  const [currenPage, setCurrenPage] = useState(1);
+  const [currenData, setCurrenData] = useState([]);
+  const [questionCounts, setQuestionCounts] = useState<Record<string, number>>(
+    {}
+  );
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -47,23 +40,33 @@ export default function Blog() {
     }
   };
 
+  const render = (rawData: any) => {
+    const filteredData = rawData.filter(
+      (item: any) => item.thumbnail !== "" && !item.deleted_at
+    );
+    setData(filteredData);
+    setTotalPage(Math.ceil(filteredData.length / COUNT));
+    setCurrenPage(1);
+    setCurrenData(filteredData.slice(0, COUNT));
+  };
+
   const init = async () => {
     try {
-      const res = await BlogService.getAll();
-
-      if (Array.isArray(res) && res.length > 0) {
-        setData(res);
-        setTotalPage(Math.ceil(res.length / COUNT));
-        setCurrenPage(1);
-        setCurrenData(res.slice(0, COUNT));
-        setIsLoading(false);
+      setIsLoading(true);
+      const res = await WritingService.getAll();
+      if (res && res?.data?.length > 0) {
+        render(res.data);
       } else {
         setData([]);
-        setIsLoading(false);
+        setCurrenData([]);
+        setQuestionCounts({});
       }
     } catch (error) {
-      console.error("Error fetching blog data:", error);
+      console.error("Failed to fetch writings:", error);
       setData([]);
+      setCurrenData([]);
+      setQuestionCounts({});
+    } finally {
       setIsLoading(false);
     }
   };
@@ -71,8 +74,6 @@ export default function Blog() {
   useEffect(() => {
     init();
   }, []);
-
-  useEffect(() => {}, [totalPage, isLoading, currenData, currenPage]);
 
   return (
     <section className="p-4">
@@ -87,13 +88,13 @@ export default function Blog() {
             </h5>
           </div>
           <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-            <ModalCreateBlog />
+            <ModalCreateWriting />
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">
           {isLoading ? (
-            <div className="w-full flex justify-center items-center pt-60">
-              <Loader className="animate-spin" size={48} />
+            <div className="w-full flex justify-center items-center pt-72">
+              <Loader className="animate-spin text-indigo-600" size={36} />
             </div>
           ) : currenData.length === 0 ? (
             <div className="col-span-2 text-center w-full flex justify-center items-center py-4">
@@ -108,72 +109,54 @@ export default function Blog() {
                   <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400">
                     <tr>
                       <th scope="col" className="w-64 px-4 py-3">
-                        TIÊU ĐỀ
+                        Tên bài viết
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        TAG
-                      </th>
-                      <th scope="col" className="w-80 px-4 py-3">
-                        NỘI DUNG
+                        Passage
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        TÁC GIẢ
+                        Thời gian làm bài
+                      </th>
+                      <th scope="col" className="w-32 px-4 py-3">
+                        Đã làm
                       </th>
                       <th scope="col" className="w-24 px-4 py-3">
-                        NGÀY
-                      </th>
-                      <th scope="col" className="w-24 px-4 py-3">
-                        CHI TIẾT
+                        Chi tiết
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {currenData?.map((item: any, index: any) => {
-                      return (
-                        <tr
-                          key={index}
-                          className={`${
-                            item?.deleted_at ? "hidden" : ""
-                          } border-b border-l border-r dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700`}
-                        >
-                          <td className="w-64 px-4 py-2 grid grid-cols-12 items-center">
-                            <Image
-                              src={item?.thumbnail}
-                              alt="img"
-                              className="w-20 h-20 mr-3 object-cover rounded-md col-span-5 border border-gray-300"
-                              width={100}
-                              height={0}
-                            />
-                            <span className="w-44 col-span-7 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                              {item?.title}
-                            </span>
-                          </td>
-                          <td className="w-32 px-4 py-2">
-                            <span className="text-[14px] bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                              {HELPER.renderTag(item?.tag)}
-                            </span>
-                          </td>
-                          <td className="w-80 px-4 py-2">
-                            <span className="text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                              <div
-                                dangerouslySetInnerHTML={{
-                                  __html: HELPER.sanitizeContent(item?.content),
-                                }}
-                              />
-                            </span>
-                          </td>
-                          <td className="w-32 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            {item?.author}
-                          </td>
-                          <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            {HELPER.formatDate(item?.created_at)}
-                          </td>
-                          <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                            <ModalUpdateBlog data={item} />
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {currenData.map((item: any, index: number) => (
+                      <tr
+                        key={index}
+                        className="border-b border-l border-r dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <td className="w-full px-4 py-2 grid grid-cols-12 gap-3 items-center">
+                          <Image
+                            src={item?.thumbnail || IMAGES.LOGO}
+                            alt="img"
+                            className="w-32 h-20 rounded-md object-cover col-span-3 border border-gray-300"
+                            width={100}
+                            height={100}
+                          />
+                          <span className="w-full col-span-9 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
+                            {item?.name}
+                          </span>
+                        </td>
+                        <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item.parts.length} phần
+                        </td>
+                        <td className="w-32 px-14 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item.time} phút
+                        </td>
+                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          0
+                        </td>
+                        <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          <ModalUpdateWriting data={item} />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -186,7 +169,7 @@ export default function Blog() {
                     <button
                       onClick={prevPage}
                       disabled={currenPage === 1}
-                      className="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
+                      className="cursor-pointer flex items-center justify-center h-full py-1.5 px-3 ml-0 text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white"
                     >
                       <span className="sr-only">Previous</span>
                       <svg
@@ -204,23 +187,21 @@ export default function Blog() {
                       </svg>
                     </button>
                   </li>
-                  {Array.from({ length: totalPage }, (_, i) => i + 1)?.map(
-                    (item: any, index: any) => {
-                      return (
-                        <li key={index} onClick={() => selectPage(item)}>
-                          <a
-                            href="#"
-                            className={`${
-                              item === currenPage
-                                ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
-                                : "bg-white"
-                            } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
-                          >
-                            {item}
-                          </a>
-                        </li>
-                      );
-                    }
+                  {Array.from({ length: totalPage }, (_, i) => i + 1).map(
+                    (item, index) => (
+                      <li key={index} onClick={() => selectPage(item)}>
+                        <a
+                          href="#"
+                          className={`${
+                            item === currenPage
+                              ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
+                              : "bg-white"
+                          } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
+                        >
+                          {item}
+                        </a>
+                      </li>
+                    )
                   )}
                   <li>
                     <button

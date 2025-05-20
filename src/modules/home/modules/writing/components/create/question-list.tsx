@@ -1,20 +1,18 @@
 import { Label } from "@/components/ui/label";
-import { on } from "events";
 
 interface Question {
   q_type: "MP" | "FB";
   question?: string;
   choices?: string[];
   answers?: string[];
-  answer?: string[];
   start_passage?: string;
   end_passage?: string;
 }
 
 interface QuestionListProps {
   questions: Question[];
-  onEdit: (index: number) => void;
-  onDelete: (index: number) => void;
+  onEdit?: (index: number) => void;
+  onDelete?: (index: number) => void;
 }
 
 export function QuestionList({
@@ -22,21 +20,10 @@ export function QuestionList({
   onEdit,
   onDelete,
 }: QuestionListProps) {
-  const getQuestionTypeLabel = (q_type: Question["q_type"]) => {
-    switch (q_type) {
-      case "MP":
-        return "Trắc nghiệm";
-      case "FB":
-        return "Điền vào chỗ trống";
-      default:
-        return "Không xác định";
-    }
-  };
-
   return (
     <>
       {questions.length > 0 && (
-        <div className="col-span-3 w-full mt-4">
+        <div className="col-span-3 mt-4">
           <Label className="text-lg font-semibold">Danh sách câu hỏi</Label>
           <div className="mt-2 space-y-4">
             {questions.map((question, index) => (
@@ -46,19 +33,31 @@ export function QuestionList({
               >
                 <div className="flex justify-between items-center">
                   <h3 className="text-md font-medium text-indigo-600">
-                    Câu hỏi {index + 1}: {getQuestionTypeLabel(question.q_type)}
+                    Câu hỏi {index + 1}:{" "}
+                    {question.q_type === "MP"
+                      ? "Trắc nghiệm"
+                      : "Điền vào chỗ trống"}
                   </h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        onEdit(index);
-                        console.log("Edit question at index:", index);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-800 font-medium"
-                    >
-                      Sửa
-                    </button>
-                  </div>
+                  {(onEdit || onDelete) && (
+                    <div className="flex gap-2">
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(index)}
+                          className="text-indigo-600 hover:text-indigo-800 font-medium"
+                        >
+                          Sửa
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(index)}
+                          className="text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Xóa
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 space-y-2">
                   {question.q_type === "MP" ? (
@@ -74,7 +73,7 @@ export function QuestionList({
                             {question.choices.map((choice, i) => (
                               <li key={i}>
                                 {choice || "Chưa nhập"}{" "}
-                                {question.answer?.includes(choice) && (
+                                {question.answers?.includes(choice) && (
                                   <span className="text-green-600">
                                     (Đáp án đúng)
                                   </span>
@@ -99,8 +98,8 @@ export function QuestionList({
                       </p>
                       <p>
                         <strong>Đáp án:</strong>{" "}
-                        {question.answer?.length
-                          ? question.answer.join(", ")
+                        {question.answers?.length
+                          ? question.answers.join(", ")
                           : "Chưa có đáp án"}
                       </p>
                     </>

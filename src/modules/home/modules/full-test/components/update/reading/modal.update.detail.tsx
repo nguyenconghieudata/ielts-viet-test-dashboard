@@ -15,10 +15,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
-import ProductDescriptionEditor from "../quill";
+import ProductDescriptionEditor from "../../quill";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ModalChooseQuestion } from "../modal.choose.question";
 import { QuestionList } from "./question-list";
 
 interface Question {

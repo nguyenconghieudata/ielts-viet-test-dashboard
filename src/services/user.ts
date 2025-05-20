@@ -2,7 +2,7 @@ import { API } from "@/utils/api";
 
 const getAll = async () => {
   try {
-    const response = await fetch(API.GET_ALL_READING, {
+    const response = await fetch(API.GET_ALL_USER, {
       method: "GET",
     });
     if (!response.ok) {
@@ -11,16 +11,16 @@ const getAll = async () => {
     const data = await response.json();
     return data;
   } catch (error: any) {
-    console.error("========= Error Get All Products:", error);
+    console.error("========= Error Get All Users:", error);
     return false;
   }
 };
 
-const createReading = async (payload: any) => {
+const createUser = async (payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(API.CREATE_READING, {
+    const response = await fetch(API.CREATE_USER, {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -31,17 +31,18 @@ const createReading = async (payload: any) => {
     }
     return true;
   } catch (error: any) {
-    console.error("========= Error Create Product:", error);
+    console.error("========= Error Create User:", error);
     return false;
   }
 };
 
-const updateReading = async (id: any, payload: any) => {
+const updateUser = async (id: any, payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
+    console.log("check update kkk: " + JSON.stringify(payload));
 
-    const response = await fetch(`${API.UPDATE_READING}/${id}`, {
+    const response = await fetch(`${API.UPDATE_USER}/${id}`, {
       method: "PUT",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -54,16 +55,16 @@ const updateReading = async (id: any, payload: any) => {
     console.log("check create: success", response.status);
     return true;
   } catch (error: any) {
-    console.error("========= Error Update Product:", error);
+    console.error("========= Error Update User:", error);
     return false;
   }
 };
 
-const deleteReading = async (id: any) => {
+const deleteUser = async (id: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(`${API.DELETE_READING}/${id}`, {
+    const response = await fetch(`${API.DELETE_USER}/${id}`, {
       method: "DELETE",
       headers: myHeaders,
       redirect: "follow",
@@ -74,14 +75,14 @@ const deleteReading = async (id: any) => {
     }
     return true;
   } catch (error: any) {
-    console.error("========= Error Delete Product:", error);
+    console.error("========= Error Delete User:", error);
     return false;
   }
 };
 
-const getReadingById = async (id: string) => {
+const getUserById = async (id: string) => {
   try {
-    const response = await fetch(`${API.GET_READING_PART_BY_ID}/${id}`, {
+    const response = await fetch(`${API.GET_USER_BY_ID}/${id}`, {
       method: "GET",
     });
     if (!response.ok) {
@@ -90,15 +91,32 @@ const getReadingById = async (id: string) => {
     const data = await response.json();
     return data.data;
   } catch (error: any) {
-    console.error("========= Error Get Blog By Id:", error);
+    console.error("========= Error Get User By Id:", error);
     return false;
   }
 };
 
-export const ReadingService = {
+const getUserAnswerById = async (id: string) => {
+  try {
+    const response = await fetch(`${API.GET_USER_ANSWER_BY_ID}/${id}`, {
+      method: "GET",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed - Status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.data;
+  } catch (error: any) {
+    console.error("========= Error Get User By Id:", error);
+    return false;
+  }
+};
+
+export const UserService = {
   getAll,
-  createReading,
-  updateReading,
-  deleteReading,
-  getReadingById,
+  createUser,
+  updateUser,
+  deleteUser,
+  getUserById,
+  getUserAnswerById,
 };

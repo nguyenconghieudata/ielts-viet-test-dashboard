@@ -13,13 +13,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader, Plus, X } from "lucide-react";
-import { useRef, useState } from "react";
-import ProductDescriptionEditor from "../quill";
+import { Loader, Plus, Upload, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ModalChooseQuestion } from "../modal.choose.question";
 import { QuestionList } from "./question-list";
+import { UploadService } from "@/services/upload";
 
 interface Question {
   _id: string;
@@ -35,26 +34,29 @@ interface Question {
 interface PartDetails {
   _id: string;
   image: string;
-  content: string;
+  audio: string;
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
   selectedQuestionType: "MP" | "FB" | null;
 }
 
-interface ModalUpdateReadingDetailProps {
+interface ModalUpdateListeningDetailProps {
   parts: PartDetails[];
   onPartsUpdate: (updatedParts: PartDetails[]) => void;
 }
 
-export function ModalUpdateReadingDetail({
+export function ModalUpdateListeningDetail({
   parts,
   onPartsUpdate,
-}: ModalUpdateReadingDetailProps) {
+}: ModalUpdateListeningDetailProps) {
   const { toast } = useToast();
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isAudioLoading, setIsAudioLoading] = useState<boolean>(false);
+
   const [activePart, setActivePart] = useState<number>(1);
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
     _id: "",
@@ -67,11 +69,73 @@ export function ModalUpdateReadingDetail({
     number | null
   >(null);
 
-  const handleContentChange = (content: string) => {
-    const updatedParts = parts.map((part) =>
-      part.part_num === activePart ? { ...part, content } : part
-    );
-    onPartsUpdate(updatedParts);
+  const handleAudioUpload = useCallback(
+    async (file: File, partNum: number) => {
+      try {
+        setIsAudioLoading(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const uploadResponse = await UploadService.uploadAudioToCloudinary([
+          file,
+        ]);
+        if (
+          uploadResponse &&
+          Array.isArray(uploadResponse) &&
+          uploadResponse[0]
+        ) {
+          const audioUrl = uploadResponse[0]?.secure_url;
+          const updatedParts = parts.map((part) =>
+            part.part_num === partNum ? { ...part, audio: audioUrl } : part
+          );
+          onPartsUpdate(updatedParts);
+          setIsAudioLoading(false);
+          toast({
+            title: "Audio uploaded successfully",
+            description: `Audio file has been uploaded for Passage ${partNum}`,
+          });
+          return audioUrl;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Audio upload failed",
+            description: "Failed to upload audio file",
+          });
+          return null;
+        }
+      } catch (error) {
+        console.error("Audio upload failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Audio upload failed",
+          description: "An error occurred while uploading the audio",
+        });
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [parts, onPartsUpdate, toast]
+  );
+
+  const handleAudioFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith("audio/")) {
+        toast({
+          variant: "destructive",
+          title: "Invalid file type",
+          description: "Please upload an audio file",
+        });
+        return;
+      }
+      await handleAudioUpload(file, activePart);
+      if (audioInputRef.current) {
+        audioInputRef.current.value = "";
+      }
+    }
   };
 
   const validateCurrentQuestion = () => {
@@ -178,6 +242,7 @@ export function ModalUpdateReadingDetail({
   const handleAddQuestion = () => {
     if (!validateCurrentQuestion()) return;
 
+    // Get the selected question type for the active part
     const selectedQuestionType = parts.find(
       (part) => part.part_num === activePart
     )?.selectedQuestionType;
@@ -187,9 +252,10 @@ export function ModalUpdateReadingDetail({
       return;
     }
 
+    // Create a new question object with the selected type
     const newQuestion: Question = {
-      _id: currentQuestion._id || Math.random().toString(36).substr(2, 9),
-      part_id: currentQuestion.part_id,
+      _id: currentQuestion._id || "",
+      part_id: currentQuestion.part_id || "",
       q_type: selectedQuestionType,
       ...(selectedQuestionType === "MP"
         ? {
@@ -204,6 +270,7 @@ export function ModalUpdateReadingDetail({
           }),
     };
 
+    // Update the parts state
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
@@ -225,8 +292,10 @@ export function ModalUpdateReadingDetail({
         : part
     );
 
+    // Update the parent component's state
     onPartsUpdate(updatedParts);
 
+    // Reset the form
     setCurrentQuestion({
       _id: "",
       part_id: "",
@@ -317,6 +386,7 @@ export function ModalUpdateReadingDetail({
               _id: question._id || "",
               part_id: question.part_id || "",
               q_type: "FB",
+              image: part.image || "",
               start_passage: question.start_passage || "",
               end_passage: question.end_passage || "",
               answer: question.answer || [],
@@ -335,8 +405,6 @@ export function ModalUpdateReadingDetail({
 
     onPartsUpdate(updatedParts);
 
-    console.log("Updated parts:", updatedParts);
-
     toast({
       title: "Đã lưu câu hỏi",
       description: "Tất cả câu hỏi đã được lưu thành công.",
@@ -346,6 +414,8 @@ export function ModalUpdateReadingDetail({
       dialogCloseRef.current.click();
     }
   };
+
+  const currentPart = parts.find((part) => part.part_num === activePart);
 
   return (
     <Dialog>
@@ -392,15 +462,52 @@ export function ModalUpdateReadingDetail({
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
               <div className="w-full grid items-center gap-4">
                 <div className="w-full mt-2">
-                  <ProductDescriptionEditor
-                    key={`editor-${activePart}`}
-                    value={
-                      parts.find((part) => part.part_num === activePart)
-                        ?.content || ""
-                    }
-                    onChange={handleContentChange}
-                    title={`Nội dung bài đọc ${activePart}`}
-                  />
+                  <Label className="text-[14.5px] mb-2 block">
+                    Audio for Passage {activePart}
+                  </Label>
+                  <div className="flex flex-col gap-4">
+                    {currentPart?.audio ? (
+                      <div className="flex flex-col gap-2">
+                        <audio
+                          controls
+                          src={currentPart.audio}
+                          className="w-full max-w-md"
+                        >
+                          Your browser does not support the audio element.
+                        </audio>
+                        <Button
+                          variant="outline"
+                          onClick={() => audioInputRef.current?.click()}
+                          disabled={isLoading}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Replace Audio
+                          {isAudioLoading && (
+                            <Loader className="ml-2 animate-spin" size={16} />
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => audioInputRef.current?.click()}
+                        disabled={isLoading}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload Audio
+                        {isAudioLoading && (
+                          <Loader className="ml-2 animate-spin" size={16} />
+                        )}
+                      </Button>
+                    )}
+                    <input
+                      type="file"
+                      ref={audioInputRef}
+                      onChange={handleAudioFileChange}
+                      accept="audio/*"
+                      className="hidden"
+                    />
+                  </div>
                 </div>
               </div>
               {parts.find((part) => part.part_num === activePart)

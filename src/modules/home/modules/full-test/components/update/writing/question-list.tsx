@@ -1,5 +1,4 @@
 import { Label } from "@/components/ui/label";
-import { on } from "events";
 
 interface Question {
   q_type: "MP" | "FB";
@@ -57,6 +56,12 @@ export function QuestionList({
                       className="text-indigo-600 hover:text-indigo-800 font-medium"
                     >
                       Sửa
+                    </button>
+                    <button
+                      onClick={() => onDelete(index)}
+                      className="text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Xóa
                     </button>
                   </div>
                 </div>

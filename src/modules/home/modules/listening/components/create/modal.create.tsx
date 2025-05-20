@@ -19,8 +19,8 @@ import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ReadingService } from "@/services/reading";
-import { ModalCreateReadingDetail } from "./modal.create.detail";
+import { ListeningService } from "@/services/listening";
+import { ModalCreateListeningDetail } from "./modal.create.detail";
 
 interface Question {
   q_type: "MP" | "FB";
@@ -30,19 +30,19 @@ interface Question {
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
-  image?: string;
+  describe_image?: string;
 }
 
 interface PartDetails {
   image: string;
-  content: string;
+  audio: string;
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
   selectedQuestionType: "MP" | "FB" | null;
 }
 
-export function ModalCreateReading() {
+export function ModalCreateListening() {
   const { toast } = useToast();
 
   const mainImageInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +58,7 @@ export function ModalCreateReading() {
   const [parts, setParts] = useState<PartDetails[]>([
     {
       image: "",
-      content: "",
+      audio: "",
       part_num: 1,
       questions: [],
       tempQuestions: [],
@@ -66,7 +66,7 @@ export function ModalCreateReading() {
     },
     {
       image: "",
-      content: "",
+      audio: "",
       part_num: 2,
       questions: [],
       tempQuestions: [],
@@ -74,8 +74,16 @@ export function ModalCreateReading() {
     },
     {
       image: "",
-      content: "",
+      audio: "",
       part_num: 3,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+    {
+      image: "",
+      audio: "",
+      part_num: 4,
       questions: [],
       tempQuestions: [],
       selectedQuestionType: null,
@@ -130,65 +138,6 @@ export function ModalCreateReading() {
     return true;
   };
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      if (
-        uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-      ) {
-        return uploadResponse[0]?.secure_url;
-      } else {
-        console.error("Upload failed or response is not as expected");
-        return "";
-      }
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
-
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    return matches.map((match) => match[1]);
-  };
-
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-
-    return updatedContent;
-  };
-
-  const base64ToFile = (base64String: string): File => {
-    const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], "image.png", { type: mime });
-  };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
@@ -199,7 +148,7 @@ export function ModalCreateReading() {
 
     const transformedParts = parts.map((part) => ({
       image: part.image,
-      content: part.content,
+      audio: part.audio,
       part_num: part.part_num,
       questions: part.questions.map((question) => {
         const transformedQuestion = {
@@ -209,21 +158,21 @@ export function ModalCreateReading() {
         if (question.q_type === "MP") {
           transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
         } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
+          transformedQuestion.describe_image = "";
         }
         return transformedQuestion;
       }),
     }));
 
     const body = {
-      skill: "R",
+      skill: "L",
       parts: transformedParts,
       name: name,
       thumbnail: uploadMainImage[0]?.url || "",
       time: time,
     };
 
-    const response = await ReadingService.createReading(body);
+    const response = await ListeningService.createListening(body);
     console.log("CHECK RESPONSE", response);
 
     setIsLoading(false);
@@ -236,7 +185,7 @@ export function ModalCreateReading() {
           type="button"
           className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <Plus size={16} className="mr-2" /> Thêm bài đọc
+          <Plus size={16} className="mr-2" /> Thêm bài nghe
         </button>
       </DialogTrigger>
       <DialogContent
@@ -245,13 +194,13 @@ export function ModalCreateReading() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Thêm bài đọc mới</span>
+            <span className="!text-[20px]">Thêm bài nghe mới</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Tạo bài đọc</strong> để tạo
-              bài đọc mới.
+              Điền thông tin bài nghe và nhấn{" "}
+              <strong className="text-indigo-600">Tạo bài nghe</strong> để tạo
+              bài nghe mới.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -340,7 +289,7 @@ export function ModalCreateReading() {
                 />
               </div>
               <div className="mt-2">
-                <ModalCreateReadingDetail
+                <ModalCreateListeningDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
                 />
@@ -363,7 +312,7 @@ export function ModalCreateReading() {
             onClick={handleSubmit}
             className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
           >
-            Tạo bài đọc
+            Tạo bài nghe
             {isLoading && <Loader className="animate-spin" size={17} />}
           </button>
         </DialogFooter>

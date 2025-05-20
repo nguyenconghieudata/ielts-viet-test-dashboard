@@ -20,7 +20,7 @@ import { useCallback, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ReadingService } from "@/services/reading";
-import { ModalCreateReadingDetail } from "./modal.create.detail";
+import { UserService } from "@/services/user";
 
 interface Question {
   q_type: "MP" | "FB";
@@ -30,61 +30,20 @@ interface Question {
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
-  image?: string;
+  describe_image?: string;
 }
 
-interface PartDetails {
-  image: string;
-  content: string;
-  part_num: number;
-  questions: Question[];
-  tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
-}
-
-export function ModalCreateReading() {
+export function ModalCreateUser() {
   const { toast } = useToast();
 
   const mainImageInputRef = useRef<HTMLInputElement>(null);
-  const secondaryImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [mainPreview, setMainPreview] = useState<string | null>(null);
 
   const [name, setName] = useState<string>("");
-  const [time, setTime] = useState<number>(0);
-
-  const [parts, setParts] = useState<PartDetails[]>([
-    {
-      image: "",
-      content: "",
-      part_num: 1,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      image: "",
-      content: "",
-      part_num: 2,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      image: "",
-      content: "",
-      part_num: 3,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-  ]);
-
-  const handlePartsUpdate = (updatedParts: PartDetails[]) => {
-    setParts(updatedParts);
-  };
+  const [email, setEmail] = useState<string>("");
 
   const handleMainImageChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -127,66 +86,16 @@ export function ModalCreateReading() {
       return false;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim() || !emailRegex.test(email)) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập email hợp lệ.",
+      });
+      return false;
+    }
+
     return true;
-  };
-
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      if (
-        uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-      ) {
-        return uploadResponse[0]?.secure_url;
-      } else {
-        console.error("Upload failed or response is not as expected");
-        return "";
-      }
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
-
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    return matches.map((match) => match[1]);
-  };
-
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-
-    return updatedContent;
-  };
-
-  const base64ToFile = (base64String: string): File => {
-    const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], "image.png", { type: mime });
   };
 
   const handleSubmit = async () => {
@@ -197,36 +106,17 @@ export function ModalCreateReading() {
       mainPreview,
     ]);
 
-    const transformedParts = parts.map((part) => ({
-      image: part.image,
-      content: part.content,
-      part_num: part.part_num,
-      questions: part.questions.map((question) => {
-        const transformedQuestion = {
-          ...question,
-          q_type: question.q_type,
-        };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
-        }
-        return transformedQuestion;
-      }),
-    }));
-
     const body = {
-      skill: "R",
-      parts: transformedParts,
-      name: name,
-      thumbnail: uploadMainImage[0]?.url || "",
-      time: time,
+      user_name: name,
+      email: email,
+      avatar: uploadMainImage[0]?.url || "",
     };
 
-    const response = await ReadingService.createReading(body);
+    const response = await UserService.createUser(body);
     console.log("CHECK RESPONSE", response);
 
     setIsLoading(false);
+    window.location.href = "/?tab=students";
   };
 
   return (
@@ -236,7 +126,7 @@ export function ModalCreateReading() {
           type="button"
           className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <Plus size={16} className="mr-2" /> Thêm bài đọc
+          <Plus size={16} className="mr-2" /> Thêm học viên
         </button>
       </DialogTrigger>
       <DialogContent
@@ -245,13 +135,13 @@ export function ModalCreateReading() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Thêm bài đọc mới</span>
+            <span className="!text-[20px]">Thêm học viên mới</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Tạo bài đọc</strong> để tạo
-              bài đọc mới.
+              Điền thông tin học viên và nhấn{" "}
+              <strong className="text-indigo-600">Tạo học viên</strong> để thêm
+              học viên mới.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -260,7 +150,7 @@ export function ModalCreateReading() {
             <div className="overflow-y-auto max-h-[70vh] scroll-bar-style">
               <div className="mb-6">
                 <Label htmlFor="thumbnail" className="text-right !text-[16px]">
-                  Hình chính
+                  Ảnh đại diện
                 </Label>
                 <div className="mt-2">
                   {!mainPreview && (
@@ -313,37 +203,30 @@ export function ModalCreateReading() {
           <div className="col-span-2">
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
               <Label htmlFor="description" className="text-[14.5px]">
-                Tên bài đọc
+                Tên học viên
               </Label>
               <div className="w-full grid items-center gap-4">
                 <textarea
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên sản phẩm"
+                  placeholder="Tên học viên"
+                  rows={2}
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
-              <Label htmlFor={`time`} className="text-[14.5px]">
-                Thời gian làm bài
+              <Label htmlFor="description" className="text-[14.5px]">
+                Email
               </Label>
-              <div className="w-full grid items-center gap-4 mt-1">
-                <input
-                  id={`time`}
-                  value={time}
-                  type="number"
-                  min={0}
-                  max={60}
-                  onChange={(e) => setTime(Number(e.target.value))}
-                  placeholder="Thời gian làm bài"
-                  className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                />
-              </div>
-              <div className="mt-2">
-                <ModalCreateReadingDetail
-                  parts={parts}
-                  onPartsUpdate={handlePartsUpdate}
-                />
+              <div className="w-full grid items-center gap-4">
+                <textarea
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email học viên"
+                  rows={2}
+                  className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
+                ></textarea>
               </div>
             </div>
           </div>
@@ -363,7 +246,7 @@ export function ModalCreateReading() {
             onClick={handleSubmit}
             className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
           >
-            Tạo bài đọc
+            Tạo học viên
             {isLoading && <Loader className="animate-spin" size={17} />}
           </button>
         </DialogFooter>

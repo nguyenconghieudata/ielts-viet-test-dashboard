@@ -14,19 +14,23 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { UploadService } from "@/services/upload";
-import { Loader, Plus, Upload, X } from "lucide-react";
+import { Loader, SquarePen, Trash2, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ReadingService } from "@/services/reading";
-import { ModalCreateReadingDetail } from "./modal.create.detail";
+import { ModalUpdateReadingDetail } from "./modal.update.detail";
+import { QuestionsService } from "@/services/questions";
+import { TestService } from "@/services/test";
 
 interface Question {
+  _id: string;
+  part_id: string;
   q_type: "MP" | "FB";
   question?: string;
   choices?: string[];
-  answers?: string[];
+  answer?: string[];
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
@@ -34,49 +38,69 @@ interface Question {
 }
 
 interface PartDetails {
+  _id: string;
   image: string;
   content: string;
   part_num: number;
-  questions: Question[];
+  question: Question[];
   tempQuestions: Question[];
   selectedQuestionType: "MP" | "FB" | null;
 }
 
-export function ModalCreateReading() {
-  const { toast } = useToast();
+interface ReadingData {
+  created_at: string;
+  name: string;
+  parts: string[];
+  thumbnail: string;
+  time: number;
+  type: string;
+  _id: string;
+}
 
+interface ModalUpdateReadingProps {
+  data: ReadingData;
+  onUpdate?: (body: any) => void; // Added callback prop
+}
+
+export function ModalUpdateReading({
+  data,
+  onUpdate,
+}: ModalUpdateReadingProps) {
+  const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
-  const secondaryImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
   const [mainPreview, setMainPreview] = useState<string | null>(null);
-
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
+  const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
+  const [open, setOpen] = useState<boolean>(false);
 
   const [parts, setParts] = useState<PartDetails[]>([
     {
+      _id: "",
       image: "",
       content: "",
       part_num: 1,
-      questions: [],
+      question: [],
       tempQuestions: [],
       selectedQuestionType: null,
     },
     {
+      _id: "",
       image: "",
       content: "",
       part_num: 2,
-      questions: [],
+      question: [],
       tempQuestions: [],
       selectedQuestionType: null,
     },
     {
+      _id: "",
       image: "",
       content: "",
       part_num: 3,
-      questions: [],
+      question: [],
       tempQuestions: [],
       selectedQuestionType: null,
     },
@@ -92,11 +116,17 @@ export function ModalCreateReading() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("File quá lớn. Vui lòng chọn file nhỏ hơn 5MB");
+      toast({
+        variant: "destructive",
+        title: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
+      });
       return;
     }
     if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn file hình ảnh");
+      toast({
+        variant: "destructive",
+        title: "Vui lòng chọn file hình ảnh",
+      });
       return;
     }
     const reader = new FileReader();
@@ -130,113 +160,161 @@ export function ModalCreateReading() {
     return true;
   };
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      if (
-        uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-      ) {
-        return uploadResponse[0]?.secure_url;
-      } else {
-        console.error("Upload failed or response is not as expected");
-        return "";
-      }
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
-
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    return matches.map((match) => match[1]);
-  };
-
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-
-    return updatedContent;
-  };
-
-  const base64ToFile = (base64String: string): File => {
-    const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], "image.png", { type: mime });
-  };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    const uploadMainImage: any = await UploadService.uploadToCloudinary([
-      mainPreview,
-    ]);
+    try {
+      const uploadMainImage: any = await UploadService.uploadToCloudinary([
+        mainPreview,
+      ]);
 
-    const transformedParts = parts.map((part) => ({
-      image: part.image,
-      content: part.content,
-      part_num: part.part_num,
-      questions: part.questions.map((question) => {
-        const transformedQuestion = {
-          ...question,
-          q_type: question.q_type,
-        };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
-        }
-        return transformedQuestion;
-      }),
-    }));
+      const transformedParts = parts.map((part) => ({
+        _id: part._id,
+        image: part.image,
+        content: part.content,
+        part_num: part.part_num,
+        question: part.question.map((question) => {
+          const transformedQuestion = { ...question };
+          if (question.q_type === "MP") {
+            transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
+          } else if (question.q_type === "FB") {
+            transformedQuestion.image = "";
+          }
+          return transformedQuestion;
+        }),
+      }));
 
-    const body = {
-      skill: "R",
-      parts: transformedParts,
-      name: name,
-      thumbnail: uploadMainImage[0]?.url || "",
-      time: time,
-    };
+      const body = {
+        parts: transformedParts,
+        name: name,
+        thumbnail: uploadMainImage[0]?.url || "",
+        time: time,
+        _id: data._id,
+      };
 
-    const response = await ReadingService.createReading(body);
-    console.log("CHECK RESPONSE", response);
+      // Pass the body to the parent component
+      onUpdate?.(body);
+      setOpen(false);
 
-    setIsLoading(false);
+      toast({
+        title: "Thành công",
+        description: "Dữ liệu bài đọc đã được cập nhật.",
+      });
+    } catch (error) {
+      console.error("Failed to update reading:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể cập nhật bài đọc. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleDelete = async () => {
+    setIsLoadingForDelete(true);
+    try {
+      const response = await ReadingService.deleteReading(data?._id);
+      toast({
+        title: "Thành công",
+        description: "Bài đọc đã được xóa.",
+      });
+      window.location.href = "/?tab=reading";
+    } catch (error) {
+      console.error("Failed to delete reading:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể xóa bài đọc. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoadingForDelete(false);
+    }
+  };
+
+  const updateDOM = async (readingData: ReadingData) => {
+    if (readingData) {
+      setName(readingData.name);
+      setTime(readingData.time);
+      setMainPreview(readingData.thumbnail);
+
+      const readingParts1 = await QuestionsService.getQuestionsById(
+        readingData?.parts[0]
+      );
+
+      const readingParts2 = await QuestionsService.getQuestionsById(
+        readingData?.parts[1]
+      );
+      const readingParts3 = await QuestionsService.getQuestionsById(
+        readingData?.parts[2]
+      );
+
+      const updatedParts = [
+        {
+          _id: readingParts1._id,
+          image: readingParts1.image || "",
+          content: readingParts1.content || "",
+          part_num: 1,
+          question: (readingParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (readingParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: readingParts2._id,
+          image: readingParts2.image || "",
+          content: readingParts2.content || "",
+          part_num: 2,
+          question: (readingParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (readingParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: readingParts3._id,
+          image: readingParts3.image || "",
+          content: readingParts3.content || "",
+          part_num: 3,
+          question: (readingParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (readingParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+      ];
+
+      setParts(updatedParts);
+    }
+  };
+
+  useEffect(() => {
+    updateDOM(data);
+  }, [data]);
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
           type="button"
           className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <Plus size={16} className="mr-2" /> Thêm bài đọc
+          Chỉnh sửa bài đọc
         </button>
       </DialogTrigger>
       <DialogContent
@@ -245,13 +323,13 @@ export function ModalCreateReading() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Thêm bài đọc mới</span>
+            <span className="!text-[20px]">Cập nhật bài đọc</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
               Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Tạo bài đọc</strong> để tạo
-              bài đọc mới.
+              <strong className="text-indigo-600">Cập nhật bài đọc</strong> để
+              lưu thay đổi.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -320,7 +398,7 @@ export function ModalCreateReading() {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên sản phẩm"
+                  placeholder="Tên bài đọc"
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
@@ -340,7 +418,7 @@ export function ModalCreateReading() {
                 />
               </div>
               <div className="mt-2">
-                <ModalCreateReadingDetail
+                <ModalUpdateReadingDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
                 />
@@ -348,24 +426,37 @@ export function ModalCreateReading() {
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="secondary"
-              className="!px-10 !text-[16px]"
-            >
-              Huỷ
-            </Button>
-          </DialogClose>
-          <button
+        <DialogFooter className="w-full flex !flex-row !justify-between !items-center">
+          <Button
+            onClick={handleDelete}
             type="submit"
-            onClick={handleSubmit}
-            className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+            className="!px-8 !text-[16px] text-red-600 bg-white border-2 border-red-600 hover:bg-red-600 hover:text-white"
           >
-            Tạo bài đọc
-            {isLoading && <Loader className="animate-spin" size={17} />}
-          </button>
+            <Trash2 />
+            Xoá
+            {isLoadingForDelete && (
+              <Loader className="animate-spin" size={48} />
+            )}
+          </Button>
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                className="!px-10 !text-[16px]"
+              >
+                Huỷ
+              </Button>
+            </DialogClose>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+            >
+              Cập nhật bài đọc
+              {isLoading && <Loader className="animate-spin" size={17} />}
+            </button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

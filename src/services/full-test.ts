@@ -2,7 +2,7 @@ import { API } from "@/utils/api";
 
 const getAll = async () => {
   try {
-    const response = await fetch(API.GET_ALL_READING, {
+    const response = await fetch(API.GET_ALL_FULLTEST, {
       method: "GET",
     });
     if (!response.ok) {
@@ -11,16 +11,16 @@ const getAll = async () => {
     const data = await response.json();
     return data;
   } catch (error: any) {
-    console.error("========= Error Get All Products:", error);
+    console.error("========= Error Get All Full Test:", error);
     return false;
   }
 };
 
-const createReading = async (payload: any) => {
+const createFullTest = async (payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(API.CREATE_READING, {
+    const response = await fetch(API.CREATE_FULL_TEST, {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -31,17 +31,18 @@ const createReading = async (payload: any) => {
     }
     return true;
   } catch (error: any) {
-    console.error("========= Error Create Product:", error);
+    console.error("========= Error Create Full Test:", error);
     return false;
   }
 };
 
-const updateReading = async (id: any, payload: any) => {
+const updateFullTest = async (id: any, payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
+    console.log("check update kkk: " + JSON.stringify(payload));
 
-    const response = await fetch(`${API.UPDATE_READING}/${id}`, {
+    const response = await fetch(`${API.UPDATE_FULL_TEST}/${id}`, {
       method: "PUT",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -54,16 +55,16 @@ const updateReading = async (id: any, payload: any) => {
     console.log("check create: success", response.status);
     return true;
   } catch (error: any) {
-    console.error("========= Error Update Product:", error);
+    console.error("========= Error Update Full Test:", error);
     return false;
   }
 };
 
-const deleteReading = async (id: any) => {
+const deleteFullTest = async (id: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(`${API.DELETE_READING}/${id}`, {
+    const response = await fetch(`${API.DELETE_FULL_TEST}/${id}`, {
       method: "DELETE",
       headers: myHeaders,
       redirect: "follow",
@@ -74,14 +75,14 @@ const deleteReading = async (id: any) => {
     }
     return true;
   } catch (error: any) {
-    console.error("========= Error Delete Product:", error);
+    console.error("========= Error Delete Full Test:", error);
     return false;
   }
 };
 
-const getReadingById = async (id: string) => {
+const getFullTestById = async (id: string) => {
   try {
-    const response = await fetch(`${API.GET_READING_PART_BY_ID}/${id}`, {
+    const response = await fetch(`${API.GET_FULL_TEST_BY_ID}/${id}`, {
       method: "GET",
     });
     if (!response.ok) {
@@ -90,15 +91,15 @@ const getReadingById = async (id: string) => {
     const data = await response.json();
     return data.data;
   } catch (error: any) {
-    console.error("========= Error Get Blog By Id:", error);
+    console.error("========= Error Get Full Test By Id:", error);
     return false;
   }
 };
 
-export const ReadingService = {
+export const FullTestService = {
   getAll,
-  createReading,
-  updateReading,
-  deleteReading,
-  getReadingById,
+  createFullTest,
+  updateFullTest,
+  deleteFullTest,
+  getFullTestById,
 };

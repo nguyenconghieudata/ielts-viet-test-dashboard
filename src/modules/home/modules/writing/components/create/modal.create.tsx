@@ -14,23 +14,18 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { UploadService } from "@/services/upload";
-import { Loader, Plus, Upload, X } from "lucide-react";
+import { Loader, Plus, Upload } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ReadingService } from "@/services/reading";
-import { ModalCreateReadingDetail } from "./modal.create.detail";
+import { ModalCreateWritingDetail } from "./modal.create.detail";
+import { WritingService } from "@/services/writing";
 
 interface Question {
-  q_type: "MP" | "FB";
-  question?: string;
-  choices?: string[];
-  answers?: string[];
-  start_passage?: string;
-  end_passage?: string;
-  isMultiple?: boolean;
-  image?: string;
+  q_type: "W";
+  image: string;
+  topic: string;
 }
 
 interface PartDetails {
@@ -39,19 +34,14 @@ interface PartDetails {
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
 }
 
-export function ModalCreateReading() {
+export function ModalCreateWriting() {
   const { toast } = useToast();
-
   const mainImageInputRef = useRef<HTMLInputElement>(null);
-  const secondaryImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
   const [mainPreview, setMainPreview] = useState<string | null>(null);
-
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
 
@@ -62,7 +52,6 @@ export function ModalCreateReading() {
       part_num: 1,
       questions: [],
       tempQuestions: [],
-      selectedQuestionType: null,
     },
     {
       image: "",
@@ -70,15 +59,6 @@ export function ModalCreateReading() {
       part_num: 2,
       questions: [],
       tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      image: "",
-      content: "",
-      part_num: 3,
-      questions: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
     },
   ]);
 
@@ -92,11 +72,17 @@ export function ModalCreateReading() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("File quá lớn. Vui lòng chọn file nhỏ hơn 5MB");
+      toast({
+        variant: "destructive",
+        title: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
+      });
       return;
     }
     if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn file hình ảnh");
+      toast({
+        variant: "destructive",
+        title: "Vui lòng chọn file hình ảnh",
+      });
       return;
     }
     const reader = new FileReader();
@@ -122,7 +108,15 @@ export function ModalCreateReading() {
     if (!name.trim()) {
       toast({
         variant: "destructive",
-        title: "Vui lòng nhập tên.",
+        title: "Vui lòng nhập tên bài viết.",
+      });
+      return false;
+    }
+
+    if (time <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập thời gian làm bài hợp lệ.",
       });
       return false;
     }
@@ -130,56 +124,35 @@ export function ModalCreateReading() {
     return true;
   };
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      if (
-        uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-      ) {
-        return uploadResponse[0]?.secure_url;
-      } else {
-        console.error("Upload failed or response is not as expected");
+  const handleImageUpload = useCallback(
+    async (dataUrl: string) => {
+      if (!dataUrl.startsWith("data:image")) return "";
+      const file = base64ToFile(dataUrl);
+      try {
+        const uploadResponse = await UploadService.uploadToCloudinary([file]);
+        if (
+          uploadResponse &&
+          Array.isArray(uploadResponse) &&
+          uploadResponse[0]
+        ) {
+          return uploadResponse[0]?.secure_url || "";
+        }
+        throw new Error("Upload failed");
+      } catch (error) {
+        console.error("Image upload failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi khi tải ảnh lên.",
+        });
         return "";
       }
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
-
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    return matches.map((match) => match[1]);
-  };
-
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-
-    return updatedContent;
-  };
+    },
+    [toast]
+  );
 
   const base64ToFile = (base64String: string): File => {
     const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
@@ -193,40 +166,72 @@ export function ModalCreateReading() {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    const uploadMainImage: any = await UploadService.uploadToCloudinary([
-      mainPreview,
-    ]);
+    try {
+      const thumbnailUrl = await handleImageUpload(mainPreview!);
 
-    const transformedParts = parts.map((part) => ({
-      image: part.image,
-      content: part.content,
-      part_num: part.part_num,
-      questions: part.questions.map((question) => {
-        const transformedQuestion = {
-          ...question,
-          q_type: question.q_type,
-        };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
-        }
-        return transformedQuestion;
-      }),
-    }));
+      const transformedParts = await Promise.all(
+        parts.map(async (part) => {
+          const transformedQuestions = await Promise.all(
+            part.questions.map(async (question) => ({
+              q_type: "W" as const,
+              image: question.image,
+              topic: question.topic,
+            }))
+          );
 
-    const body = {
-      skill: "R",
-      parts: transformedParts,
-      name: name,
-      thumbnail: uploadMainImage[0]?.url || "",
-      time: time,
-    };
+          return {
+            part_num: part.part_num,
+            questions: transformedQuestions,
+          };
+        })
+      );
 
-    const response = await ReadingService.createReading(body);
-    console.log("CHECK RESPONSE", response);
+      const body = {
+        skill: "W",
+        parts: transformedParts,
+        name: name,
+        thumbnail: thumbnailUrl,
+        time: time,
+      };
 
-    setIsLoading(false);
+      const response = await WritingService.createWriting(body);
+      if (response) {
+        toast({
+          title: "Thành công",
+          description: "Bài viết đã được tạo thành công.",
+        });
+        setMainPreview(null);
+        setName("");
+        setTime(0);
+        setParts([
+          {
+            image: "",
+            content: "",
+            part_num: 1,
+            questions: [],
+            tempQuestions: [],
+          },
+          {
+            image: "",
+            content: "",
+            part_num: 2,
+            questions: [],
+            tempQuestions: [],
+          },
+        ]);
+      }
+
+      window.location.href = "/?tab=writing";
+    } catch (error) {
+      console.error("Failed to create writing:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể tạo bài viết. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -236,7 +241,7 @@ export function ModalCreateReading() {
           type="button"
           className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <Plus size={16} className="mr-2" /> Thêm bài đọc
+          <Plus size={16} className="mr-2" /> Thêm bài viết
         </button>
       </DialogTrigger>
       <DialogContent
@@ -245,13 +250,13 @@ export function ModalCreateReading() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Thêm bài đọc mới</span>
+            <span className="!text-[20px]">Thêm bài viết mới</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Tạo bài đọc</strong> để tạo
-              bài đọc mới.
+              Điền thông tin bài viết và nhấn{" "}
+              <strong className="text-indigo-600">Tạo bài viết</strong> để tạo
+              bài viết mới.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -313,19 +318,19 @@ export function ModalCreateReading() {
           <div className="col-span-2">
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
               <Label htmlFor="description" className="text-[14.5px]">
-                Tên bài đọc
+                Tên bài viết
               </Label>
               <div className="w-full grid items-center gap-4">
                 <textarea
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên sản phẩm"
+                  placeholder="Tên bài viết"
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
               <Label htmlFor={`time`} className="text-[14.5px]">
-                Thời gian làm bài
+                Thời gian làm bài (phút)
               </Label>
               <div className="w-full grid items-center gap-4 mt-1">
                 <input
@@ -340,7 +345,7 @@ export function ModalCreateReading() {
                 />
               </div>
               <div className="mt-2">
-                <ModalCreateReadingDetail
+                <ModalCreateWritingDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
                 />
@@ -362,8 +367,9 @@ export function ModalCreateReading() {
             type="submit"
             onClick={handleSubmit}
             className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+            disabled={isLoading}
           >
-            Tạo bài đọc
+            Tạo bài viết
             {isLoading && <Loader className="animate-spin" size={17} />}
           </button>
         </DialogFooter>

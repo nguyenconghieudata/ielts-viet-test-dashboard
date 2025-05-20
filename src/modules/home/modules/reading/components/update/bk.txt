@@ -1,0 +1,20 @@
+
+                {/* <ModalChooseQuestion
+                  onTypeSelected={(type) => {
+                    const updatedParts = parts.map((part) =>
+                      part.part_num === activePart
+                        ? { ...part, selectedQuestionType: type }
+                        : part
+                    );
+                    onPartsUpdate(updatedParts);
+                    setCurrentQuestion({
+                      q_type: type,
+                      choices: type === "MP" ? [""] : undefined,
+                      answer: [],
+                      question: "",
+                      start_passage: "",
+                      end_passage: "",
+                    });
+                    setEditingQuestionIndex(null);
+                  }}
+                /> */}

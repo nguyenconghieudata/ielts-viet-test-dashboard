@@ -2,7 +2,22 @@ import { API } from "@/utils/api";
 
 const getAll = async () => {
   try {
-    const response = await fetch(API.GET_ALL_READING, {
+    const response = await fetch(API.GET_ALL_WRITING, {
+      method: "GET",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed - Status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("========= Error Get All Products:", error);
+    return false;
+  }
+};
+const getAllSubmit = async () => {
+  try {
+    const response = await fetch(API.GET_ALL_WRITING_SUBMISSIONS, {
       method: "GET",
     });
     if (!response.ok) {
@@ -16,11 +31,11 @@ const getAll = async () => {
   }
 };
 
-const createReading = async (payload: any) => {
+const createWriting = async (payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(API.CREATE_READING, {
+    const response = await fetch(API.CREATE_WRITING, {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -36,12 +51,13 @@ const createReading = async (payload: any) => {
   }
 };
 
-const updateReading = async (id: any, payload: any) => {
+const updateWriting = async (id: any, payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
+    console.log("check update kkk: " + JSON.stringify(payload));
 
-    const response = await fetch(`${API.UPDATE_READING}/${id}`, {
+    const response = await fetch(`${API.UPDATE_WRITING}/${id}?type=writing`, {
       method: "PUT",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -59,11 +75,11 @@ const updateReading = async (id: any, payload: any) => {
   }
 };
 
-const deleteReading = async (id: any) => {
+const deleteWriting = async (id: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(`${API.DELETE_READING}/${id}`, {
+    const response = await fetch(`${API.DELETE_WRITING}/${id}`, {
       method: "DELETE",
       headers: myHeaders,
       redirect: "follow",
@@ -79,9 +95,9 @@ const deleteReading = async (id: any) => {
   }
 };
 
-const getReadingById = async (id: string) => {
+const getWritingById = async (id: string) => {
   try {
-    const response = await fetch(`${API.GET_READING_PART_BY_ID}/${id}`, {
+    const response = await fetch(`${API.GET_WRITING_PART_BY_ID}/${id}`, {
       method: "GET",
     });
     if (!response.ok) {
@@ -95,10 +111,11 @@ const getReadingById = async (id: string) => {
   }
 };
 
-export const ReadingService = {
+export const WritingService = {
   getAll,
-  createReading,
-  updateReading,
-  deleteReading,
-  getReadingById,
+  createWriting,
+  updateWriting,
+  deleteWriting,
+  getWritingById,
+  getAllSubmit,
 };

@@ -14,27 +14,20 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { UploadService } from "@/services/upload";
-import { Loader, SquarePen, Trash2, Upload, X } from "lucide-react";
+import { Loader, SquarePen, Trash2, Upload } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ReadingService } from "@/services/reading";
-import { ModalUpdateReadingDetail } from "./modal.update.detail";
+import { WritingService } from "@/services/writing";
 import { QuestionsService } from "@/services/questions";
-import { TestService } from "@/services/test";
+import { ModalUpdateWritingDetail } from "./modal.update.detail";
 
 interface Question {
   _id: string;
-  part_id: string;
-  q_type: "MP" | "FB";
-  question?: string;
-  choices?: string[];
-  answer?: string[];
-  start_passage?: string;
-  end_passage?: string;
-  isMultiple?: boolean;
-  image?: string;
+  q_type: "W";
+  image: string;
+  topic: string;
 }
 
 interface PartDetails {
@@ -42,12 +35,11 @@ interface PartDetails {
   image: string;
   content: string;
   part_num: number;
-  question: Question[];
+  questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
 }
 
-interface ReadingData {
+interface WritingData {
   created_at: string;
   name: string;
   parts: string[];
@@ -57,49 +49,47 @@ interface ReadingData {
   _id: string;
 }
 
-export function ModalUpdateReading({ data }: { data: ReadingData }) {
+interface ModalUpdateWritingProps {
+  data: WritingData;
+  onUpdate?: (body: any) => void; // Added callback prop
+}
+
+export function ModalUpdateWriting({
+  data,
+  onUpdate,
+}: ModalUpdateWritingProps) {
   const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
-  const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
-
   const [parts, setParts] = useState<PartDetails[]>([
     {
       _id: "",
       image: "",
       content: "",
       part_num: 1,
-      question: [],
+      questions: [],
       tempQuestions: [],
-      selectedQuestionType: null,
     },
     {
       _id: "",
       image: "",
       content: "",
       part_num: 2,
-      question: [],
+      questions: [],
       tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 3,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
     },
   ]);
 
-  const handlePartsUpdate = (updatedParts: PartDetails[]) => {
+  const [open, setOpen] = useState<boolean>(false);
+
+  const handlePartsUpdate = useCallback((updatedParts: PartDetails[]) => {
     setParts(updatedParts);
-  };
+  }, []);
 
   const handleMainImageChange = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -148,59 +138,55 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       return false;
     }
 
+    if (time <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng nhập thời gian làm bài hợp lệ.",
+      });
+      return false;
+    }
+
+    const hasValidParts = parts.some((part) => part.questions.length > 0);
+    if (!hasValidParts) {
+      toast({
+        variant: "destructive",
+        title: "Vui lòng thêm ít nhất một câu hỏi cho một phần.",
+      });
+      return false;
+    }
+
     return true;
   };
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-    try {
-      const uploadResponse = await UploadService.uploadToCloudinary([file]);
-      if (
-        uploadResponse &&
-        Array.isArray(uploadResponse) &&
-        uploadResponse[0]
-      ) {
-        return uploadResponse[0]?.secure_url;
-      } else {
-        console.error("Upload failed or response is not as expected");
+  const handleImageUpload = useCallback(
+    async (dataUrl: string) => {
+      if (!dataUrl.startsWith("data:image")) return dataUrl;
+      const file = base64ToFile(dataUrl);
+      try {
+        const uploadResponse = await UploadService.uploadToCloudinary([file]);
+        if (
+          uploadResponse &&
+          Array.isArray(uploadResponse) &&
+          uploadResponse[0]
+        ) {
+          return uploadResponse[0]?.secure_url || "";
+        }
+        throw new Error("Upload failed");
+      } catch (error) {
+        console.error("Image upload failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi khi tải ảnh lên.",
+        });
         return "";
       }
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      return "";
-    }
-  }, []);
-
-  const extractBase64Images = (htmlContent: string) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    return matches.map((match) => match[1]);
-  };
-
-  const replaceBase64WithCloudUrls = async (
-    htmlContent: string,
-    uploadFunc: (file: File) => Promise<string>
-  ) => {
-    const imgTagRegex =
-      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-    let updatedContent = htmlContent;
-
-    const matches = [...htmlContent.matchAll(imgTagRegex)];
-    for (const match of matches) {
-      const base64String = match[1];
-      const file = base64ToFile(base64String);
-      const uploadedUrl = await uploadFunc(file);
-      updatedContent = updatedContent.replace(base64String, uploadedUrl);
-    }
-
-    return updatedContent;
-  };
+    },
+    [toast]
+  );
 
   const base64ToFile = (base64String: string): File => {
     const arr = base64String.split(",");
-    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const mime = arr[0].match(/:(.*?);/)?.[1] || "image/png";
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
@@ -210,132 +196,175 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
     return new File([u8arr], "image.png", { type: mime });
   };
 
+  const replaceBase64WithCloudUrls = async (
+    htmlContent: string,
+    uploadFunc: (dataUrl: string) => Promise<string>
+  ) => {
+    const imgTagRegex =
+      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+    let updatedContent = htmlContent;
+
+    const matches = [...htmlContent.matchAll(imgTagRegex)];
+    for (const match of matches) {
+      const base64String = match[1];
+      const uploadedUrl = await uploadFunc(base64String);
+      if (uploadedUrl) {
+        updatedContent = updatedContent.replace(base64String, uploadedUrl);
+      }
+    }
+
+    return updatedContent;
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    const uploadMainImage: any = await UploadService.uploadToCloudinary([
-      mainPreview,
-    ]);
+    try {
+      const thumbnailUrl = mainPreview?.startsWith("data:image")
+        ? await handleImageUpload(mainPreview)
+        : mainPreview;
 
-    const transformedParts = parts.map((part) => ({
-      _id: part._id,
-      image: part.image,
-      content: part.content,
-      part_num: part.part_num,
-      question: part.question.map((question) => {
-        const transformedQuestion = { ...question };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
-        }
-        return transformedQuestion;
-      }),
-    }));
+      const transformedParts = await Promise.all(
+        parts.map(async (part) => {
+          const transformedQuestions = await Promise.all(
+            part.questions.map(async (question) => ({
+              _id: question._id,
+              part_id: part._id,
+              q_type: "W" as const,
+              image: question.image,
+              topic: question.topic,
+            }))
+          );
 
-    const body = {
-      parts: transformedParts,
-      name: name,
-      thumbnail: uploadMainImage[0]?.url || "",
-      time: time,
-    };
-    // console.log("CHECK BODY", JSON.stringify(body));
+          return {
+            _id: part._id,
+            part_num: part.part_num,
+            question: transformedQuestions,
+          };
+        })
+      );
 
-    const response = await TestService.updateReading(data?._id, body);
+      const body = {
+        // skill: "W",
+        parts: transformedParts,
+        name: name,
+        thumbnail: thumbnailUrl || "",
+        time: time,
+      };
 
-    setIsLoading(false);
-    window.location.href = "/?tab=reading";
+      // Pass the body to the parent component
+      onUpdate?.(body);
+
+      setOpen(false);
+
+      toast({
+        title: "Thành công",
+        description: "Bài viết đã được cập nhật thành công.",
+      });
+    } catch (error) {
+      console.error("Failed to update writing:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể cập nhật bài viết. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = async () => {
     setIsLoadingForDelete(true);
-    const response = await ReadingService.deleteReading(data?._id);
-    setIsLoadingForDelete(false);
-    window.location.href = "/?tab=reading";
+    try {
+      const response = await WritingService.deleteWriting(data?._id);
+      if (response) {
+        toast({
+          title: "Thành công",
+          description: "Bài viết đã được xóa thành công.",
+        });
+        window.location.href = "/?tab=writing";
+      }
+    } catch (error) {
+      console.error("Failed to delete writing:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể xóa bài viết. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoadingForDelete(false);
+    }
   };
 
-  const updateDOM = async (readingData: ReadingData) => {
-    if (readingData) {
-      setName(readingData.name);
-      setTime(readingData.time);
-      setMainPreview(readingData.thumbnail);
+  const updateDOM = async (writingData: WritingData) => {
+    if (!writingData) return;
 
-      const readingParts1 = await QuestionsService.getQuestionsById(
-        readingData.parts[0]
-      );
+    setName(writingData.name);
+    setTime(writingData.time);
+    setMainPreview(writingData.thumbnail);
 
-      const readingParts2 = await QuestionsService.getQuestionsById(
-        readingData.parts[1]
-      );
-      const readingParts3 = await QuestionsService.getQuestionsById(
-        readingData.parts[2]
-      );
+    try {
+      const [writingParts1, writingParts2] = await Promise.all([
+        QuestionsService.getQuestionsById(writingData.parts[0]),
+        QuestionsService.getQuestionsById(writingData.parts[1]),
+      ]);
 
       const updatedParts = [
         {
-          _id: readingParts1._id,
-          image: readingParts1.image || "",
-          content: readingParts1.content || "",
+          _id: writingData.parts[0] || "",
+          image: writingParts1.image || "",
+          content:
+            writingParts1.content || writingParts1.question?.[0]?.content || "",
           part_num: 1,
-          question: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
+          questions: (writingParts1.question || []).map((q: any) => ({
+            _id: q._id || "",
+            q_type: "W" as const,
+            image: q.image || "",
+            topic: q.topic || "",
           })),
-          tempQuestions: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
+          tempQuestions: [],
         },
         {
-          _id: readingParts2._id,
-          image: readingParts2.image || "",
-          content: readingParts2.content || "",
+          _id: writingData.parts[1] || "",
+          image: writingParts2.image || "",
+          content:
+            writingParts2.content || writingParts2.question?.[0]?.content || "",
           part_num: 2,
-          question: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
+          questions: (writingParts2.question || []).map((q: any) => ({
+            _id: q._id || "",
+            q_type: "W" as const,
+            image: q.image,
+            topic: q.topic || "",
           })),
-          tempQuestions: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts3._id,
-          image: readingParts3.image || "",
-          content: readingParts3.content || "",
-          part_num: 3,
-          question: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
+          tempQuestions: [],
         },
       ];
 
       setParts(updatedParts);
+      console.log("CHECK WRITING PARTS", updatedParts);
+    } catch (error) {
+      console.error("Failed to fetch writing parts:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể tải dữ liệu phần bài viết.",
+      });
     }
   };
 
   useEffect(() => {
     updateDOM(data);
-  }, [data]);
+  }, [data._id]);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
           type="button"
-          className="flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
+          className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
         >
-          <SquarePen />
+          Chỉnh sửa bài viết
         </button>
       </DialogTrigger>
       <DialogContent
@@ -344,12 +373,12 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Cập nhật bài đọc</span>
+            <span className="!text-[20px]">Cập nhật bài viết</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
-              Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Cập nhật bài đọc</strong> để
+              Điền thông tin bài viết và nhấn{" "}
+              <strong className="text-indigo-600">Cập nhật bài viết</strong> để
               lưu thay đổi.
             </span>
           </DialogDescription>
@@ -411,24 +440,24 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           </div>
           <div className="col-span-2">
             <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
-              <Label htmlFor="description" className="text-[14.5px]">
-                Tên bài đọc
+              <Label htmlFor="name" className="text-[14.5px]">
+                Tên bài viết
               </Label>
               <div className="w-full grid items-center gap-4">
                 <textarea
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên bài đọc"
+                  placeholder="Tên bài viết"
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
-              <Label htmlFor={`time`} className="text-[14.5px]">
+              <Label htmlFor="time" className="text-[14.5px]">
                 Thời gian làm bài
               </Label>
               <div className="w-full grid items-center gap-4 mt-1">
                 <input
-                  id={`time`}
+                  id="time"
                   value={time}
                   type="number"
                   min={0}
@@ -439,7 +468,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                 />
               </div>
               <div className="mt-2">
-                <ModalUpdateReadingDetail
+                <ModalUpdateWritingDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
                 />
@@ -452,11 +481,12 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             onClick={handleDelete}
             type="submit"
             className="!px-8 !text-[16px] text-red-600 bg-white border-2 border-red-600 hover:bg-red-600 hover:text-white"
+            disabled={isLoadingForDelete}
           >
             <Trash2 />
             Xoá
             {isLoadingForDelete && (
-              <Loader className="animate-spin" size={48} />
+              <Loader className="animate-spin ml-2" size={17} />
             )}
           </Button>
           <div className="flex gap-2">
@@ -473,9 +503,10 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
               type="submit"
               onClick={handleSubmit}
               className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+              disabled={isLoading}
             >
-              Cập nhật bài đọc
-              {isLoading && <Loader className="animate-spin" size={17} />}
+              Cập nhật bài viết
+              {isLoading && <Loader className="animate-spin ml-2" size={17} />}
             </button>
           </div>
         </DialogFooter>

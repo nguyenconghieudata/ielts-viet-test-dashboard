@@ -2,27 +2,25 @@ import { API } from "@/utils/api";
 
 const getAll = async () => {
   try {
-    const response = await fetch(API.GET_ALL_BLOGS, {
+    const response = await fetch(API.GET_ALL_LISTENING, {
       method: "GET",
     });
     if (!response.ok) {
       throw new Error(`Failed - Status: ${response.status}`);
     }
     const data = await response.json();
-    return data.data;
+    return data;
   } catch (error: any) {
-    console.error("========= Error Get All Blogs:", error);
+    console.error("========= Error Get All Listening:", error);
     return false;
   }
 };
 
-const createBlog = async (payload: any) => {
+const createListening = async (payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    console.log("Check blog create: " + JSON.stringify(payload));
-
-    const response = await fetch(API.CREATE_BLOG, {
+    const response = await fetch(API.CREATE_LISTENING, {
       method: "POST",
       headers: myHeaders,
       body: JSON.stringify(payload),
@@ -33,36 +31,40 @@ const createBlog = async (payload: any) => {
     }
     return true;
   } catch (error: any) {
-    console.error("========= Error Create Blog:", error);
+    console.error("========= Error Create Listening:", error);
     return false;
   }
 };
 
-const updateBlog = async (id: any, payload: any) => {
+const updateListening = async (id: any, payload: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(`${API.UPDATE_BLOG}/${id}`, {
+    console.log("check update kkk: " + JSON.stringify(payload));
+
+    const response = await fetch(`${API.UPDATE_LISTENING}/${id}`, {
       method: "PUT",
       headers: myHeaders,
       body: JSON.stringify(payload),
       redirect: "follow",
     });
     if (!response.ok) {
+      console.log("check create: failed", response.status);
       throw new Error(`Failed - Status: ${response.status}`);
     }
+    console.log("check create: success", response.status);
     return true;
   } catch (error: any) {
-    console.error("========= Error Update Blog:", error);
+    console.error("========= Error Update Listening:", error);
     return false;
   }
 };
 
-const deleteBlog = async (id: any) => {
+const deleteListening = async (id: any) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(`${API.DELETE_BLOG}/${id}`, {
+    const response = await fetch(`${API.DELETE_LISTENING}/${id}`, {
       method: "DELETE",
       headers: myHeaders,
       redirect: "follow",
@@ -73,14 +75,31 @@ const deleteBlog = async (id: any) => {
     }
     return true;
   } catch (error: any) {
-    console.error("========= Error Delete Blog:", error);
+    console.error("========= Error Delete Listening:", error);
     return false;
   }
 };
 
-export const BlogService = {
+const getListeningById = async (id: string) => {
+  try {
+    const response = await fetch(`${API.GET_LISTENING_PART_BY_ID}/${id}`, {
+      method: "GET",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed - Status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.data;
+  } catch (error: any) {
+    console.error("========= Error Get Listening By Id:", error);
+    return false;
+  }
+};
+
+export const ListeningService = {
   getAll,
-  createBlog,
-  updateBlog,
-  deleteBlog,
+  createListening,
+  updateListening,
+  deleteListening,
+  getListeningById,
 };

@@ -14,69 +14,93 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { UploadService } from "@/services/upload";
-import { Loader, Plus, Upload, X } from "lucide-react";
+import { Loader, SquarePen, Trash2, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
-import { ReadingService } from "@/services/reading";
-import { ModalCreateReadingDetail } from "./modal.create.detail";
+import { ListeningService } from "@/services/listening";
+import { ModalUpdateListeningDetail } from "./modal.update.detail";
+import { QuestionsService } from "@/services/questions";
+import { TestService } from "@/services/test";
 
 interface Question {
+  _id: string;
+  part_id: string;
   q_type: "MP" | "FB";
   question?: string;
   choices?: string[];
-  answers?: string[];
+  answer?: string[];
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
-  image?: string;
+  describe_image?: string;
 }
 
 interface PartDetails {
+  _id: string;
   image: string;
-  content: string;
+  audio: string;
   part_num: number;
-  questions: Question[];
+  question: Question[];
   tempQuestions: Question[];
   selectedQuestionType: "MP" | "FB" | null;
 }
 
-export function ModalCreateReading() {
-  const { toast } = useToast();
+interface ListeningData {
+  created_at: string;
+  name: string;
+  parts: string[];
+  thumbnail: string;
+  time: number;
+  type: string;
+  _id: string;
+}
 
+export function ModalUpdateListening({ data }: { data: ListeningData }) {
+  const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
-  const secondaryImageInputRef = useRef<HTMLInputElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
   const [mainPreview, setMainPreview] = useState<string | null>(null);
-
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
+  const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
 
   const [parts, setParts] = useState<PartDetails[]>([
     {
+      _id: "",
       image: "",
-      content: "",
+      audio: "",
       part_num: 1,
-      questions: [],
+      question: [],
       tempQuestions: [],
       selectedQuestionType: null,
     },
     {
+      _id: "",
       image: "",
-      content: "",
+      audio: "",
       part_num: 2,
-      questions: [],
+      question: [],
       tempQuestions: [],
       selectedQuestionType: null,
     },
     {
+      _id: "",
       image: "",
-      content: "",
+      audio: "",
       part_num: 3,
-      questions: [],
+      question: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    },
+    {
+      _id: "",
+      image: "",
+      audio: "",
+      part_num: 4,
+      question: [],
       tempQuestions: [],
       selectedQuestionType: null,
     },
@@ -92,11 +116,17 @@ export function ModalCreateReading() {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      alert("File quá lớn. Vui lòng chọn file nhỏ hơn 5MB");
+      toast({
+        variant: "destructive",
+        title: "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
+      });
       return;
     }
     if (!file.type.startsWith("image/")) {
-      alert("Vui lòng chọn file hình ảnh");
+      toast({
+        variant: "destructive",
+        title: "Vui lòng chọn file hình ảnh",
+      });
       return;
     }
     const reader = new FileReader();
@@ -198,45 +228,141 @@ export function ModalCreateReading() {
     ]);
 
     const transformedParts = parts.map((part) => ({
+      _id: part._id,
       image: part.image,
-      content: part.content,
+      audio: part.audio,
       part_num: part.part_num,
-      questions: part.questions.map((question) => {
-        const transformedQuestion = {
-          ...question,
-          q_type: question.q_type,
-        };
+      question: part.question.map((question) => {
+        const transformedQuestion = { ...question };
         if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
+          transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
         } else if (question.q_type === "FB") {
-          transformedQuestion.image = "";
+          transformedQuestion.describe_image = "";
         }
         return transformedQuestion;
       }),
     }));
 
     const body = {
-      skill: "R",
       parts: transformedParts,
       name: name,
       thumbnail: uploadMainImage[0]?.url || "",
       time: time,
     };
 
-    const response = await ReadingService.createReading(body);
-    console.log("CHECK RESPONSE", response);
+    const response = await TestService.updateListening(data?._id, body);
 
     setIsLoading(false);
+    window.location.href = "/?tab=listening";
   };
+
+  const handleDelete = async () => {
+    setIsLoadingForDelete(true);
+    const response = await ListeningService.deleteListening(data?._id);
+    setIsLoadingForDelete(false);
+    window.location.href = "/?tab=listening";
+  };
+
+  const updateDOM = async (ListeningData: ListeningData) => {
+    if (ListeningData) {
+      setName(ListeningData.name);
+      setTime(ListeningData.time);
+      setMainPreview(ListeningData.thumbnail);
+
+      const ListeningParts1 = await QuestionsService.getQuestionsById(
+        ListeningData.parts[0]
+      );
+
+      const ListeningParts2 = await QuestionsService.getQuestionsById(
+        ListeningData.parts[1]
+      );
+      const ListeningParts3 = await QuestionsService.getQuestionsById(
+        ListeningData.parts[2]
+      );
+      const ListeningParts4 = await QuestionsService.getQuestionsById(
+        ListeningData.parts[3]
+      );
+
+      const updatedParts = [
+        {
+          _id: ListeningParts1._id || "",
+          image: ListeningParts1.image || "",
+          audio: ListeningParts1.audio || "",
+          part_num: 1,
+          question: (ListeningParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (ListeningParts1.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: ListeningParts2._id || "",
+          image: ListeningParts2.image || "",
+          audio: ListeningParts2.audio || "",
+          part_num: 2,
+          question: (ListeningParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (ListeningParts2.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: ListeningParts3._id || "",
+          image: ListeningParts3.image || "",
+          audio: ListeningParts3.audio || "",
+          part_num: 3,
+          question: (ListeningParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (ListeningParts3.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+        {
+          _id: ListeningParts4._id || "",
+          image: ListeningParts4.image || "",
+          audio: ListeningParts4.audio || "",
+          part_num: 4,
+          question: (ListeningParts4.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          tempQuestions: (ListeningParts4.question || []).map((q: any) => ({
+            ...q,
+            answer: q.answer || q.answers || [],
+          })),
+          selectedQuestionType: null,
+        },
+      ];
+
+      setParts(updatedParts);
+    }
+  };
+
+  useEffect(() => {
+    updateDOM(data);
+    // console.log("CHECK DATA", data);
+  }, [data]);
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <button
           type="button"
-          className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+          className="flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
         >
-          <Plus size={16} className="mr-2" /> Thêm bài đọc
+          <SquarePen />
         </button>
       </DialogTrigger>
       <DialogContent
@@ -245,13 +371,13 @@ export function ModalCreateReading() {
       >
         <DialogHeader>
           <DialogTitle>
-            <span className="!text-[20px]">Thêm bài đọc mới</span>
+            <span className="!text-[20px]">Cập nhật bài đọc</span>
           </DialogTitle>
           <DialogDescription>
             <span className="!text-[16px]">
               Điền thông tin bài đọc và nhấn{" "}
-              <strong className="text-indigo-600">Tạo bài đọc</strong> để tạo
-              bài đọc mới.
+              <strong className="text-indigo-600">Cập nhật bài đọc</strong> để
+              lưu thay đổi.
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -320,7 +446,7 @@ export function ModalCreateReading() {
                   id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên sản phẩm"
+                  placeholder="Tên bài đọc"
                   className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
                 ></textarea>
               </div>
@@ -340,7 +466,7 @@ export function ModalCreateReading() {
                 />
               </div>
               <div className="mt-2">
-                <ModalCreateReadingDetail
+                <ModalUpdateListeningDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
                 />
@@ -348,24 +474,37 @@ export function ModalCreateReading() {
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="secondary"
-              className="!px-10 !text-[16px]"
-            >
-              Huỷ
-            </Button>
-          </DialogClose>
-          <button
+        <DialogFooter className="w-full flex !flex-row !justify-between !items-center">
+          <Button
+            onClick={handleDelete}
             type="submit"
-            onClick={handleSubmit}
-            className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+            className="!px-8 !text-[16px] text-red-600 bg-white border-2 border-red-600 hover:bg-red-600 hover:text-white"
           >
-            Tạo bài đọc
-            {isLoading && <Loader className="animate-spin" size={17} />}
-          </button>
+            <Trash2 />
+            Xoá
+            {isLoadingForDelete && (
+              <Loader className="animate-spin" size={48} />
+            )}
+          </Button>
+          <div className="flex gap-2">
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                className="!px-10 !text-[16px]"
+              >
+                Huỷ
+              </Button>
+            </DialogClose>
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+            >
+              Cập nhật bài đọc
+              {isLoading && <Loader className="animate-spin" size={17} />}
+            </button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

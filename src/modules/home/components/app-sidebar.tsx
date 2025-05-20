@@ -7,6 +7,8 @@ import {
   SquarePen,
   Headphones,
   BookCheck,
+  User,
+  NotepadText,
 } from "lucide-react";
 import { NavProjects } from "./nav-projects";
 import { TeamSwitcher } from "./team-switcher";
@@ -45,6 +47,18 @@ const data = {
       url: "?tab=full-test",
       tab: "full-test",
       icon: <BookCheck />,
+    },
+    {
+      name: "Students",
+      url: "?tab=students",
+      tab: "students",
+      icon: <User />,
+    },
+    {
+      name: "Writing Submission",
+      url: "?tab=writing-submission",
+      tab: "writing-submission",
+      icon: <NotepadText />,
     },
   ],
 };

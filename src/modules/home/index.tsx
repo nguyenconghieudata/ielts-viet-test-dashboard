@@ -16,10 +16,12 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { useSearchParams } from "next/navigation";
-import Order from "./modules/listening";
+import Listening from "./modules/listening";
 import Blog from "./modules/writing";
 import Customer from "./modules/full-test";
 import Reading from "./modules/reading";
+import Students from "./modules/students";
+import WritingSubmit from "./modules/writing-submit";
 
 export default function HomeClient() {
   const param = useSearchParams();
@@ -29,11 +31,15 @@ export default function HomeClient() {
       case "reading":
         return <Reading />;
       case "listening":
-        return <Order />;
+        return <Listening />;
       case "writing":
         return <Blog />;
       case "full-test":
         return <Customer />;
+      case "students":
+        return <Students />;
+      case "writing-submission":
+        return <WritingSubmit />;
       default:
         return <Reading />;
     }
@@ -49,6 +55,10 @@ export default function HomeClient() {
         return "Bài Viết";
       case "full-test":
         return "Full Test";
+      case "students":
+        return "Học Viên";
+      case "writing-submission":
+        return "Nộp Bài Viết";
       default:
         return "Bài Đọc";
     }
