@@ -82,7 +82,7 @@ export default function Reading() {
           <div className="flex items-center flex-1">
             <h5>
               <span className="text-gray-800 text-[20px] font-bold">
-                DANH SÁCH BÀI ĐỌC kekekekeke{" "}
+                DANH SÁCH BÀI ĐỌC{" "}
                 <span className="text-indigo-600">({data?.length})</span>
               </span>
             </h5>
