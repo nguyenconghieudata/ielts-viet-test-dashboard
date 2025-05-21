@@ -28,23 +28,23 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: pnpm
+      # - name: Setup Node
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: "20"
+      #     cache: pnpm
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+      # - name: Install pnpm
+      #   run: npm install -g pnpm
 
-      - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+      # - name: Install Vercel CLI
+      #   run: pnpm add -g vercel@latest
 
-      - name: Install dependencies
-        run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
+      # - name: Install dependencies
+      #   run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
 
-      - name: Build Next.js project
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+      # - name: Build Next.js project
+      #   run: ${{ steps.detect-package-manager.outputs.runner }} next build
 
       - name: Deploy to Vercel
         run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
