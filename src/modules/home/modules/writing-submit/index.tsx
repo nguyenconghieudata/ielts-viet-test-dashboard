@@ -54,8 +54,10 @@ export default function WritingSubmit() {
     try {
       setIsLoading(true);
       const res = await WritingService.getAllSubmit();
+      console.log("Fetched writings:", res);
+
       if (res && res?.data?.length > 0) {
-        render(res.data);
+        render(res.data.filter((item: any) => item.user_id !== ""));
         setIsLoading(false);
       } else {
         setData([]);
@@ -189,10 +191,11 @@ export default function WritingSubmit() {
                       <li key={index} onClick={() => selectPage(item)}>
                         <a
                           href="#"
-                          className={`${item === currenPage
-                            ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
-                            : "bg-white"
-                            } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
+                          className={`${
+                            item === currenPage
+                              ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
+                              : "bg-white"
+                          } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
                         >
                           {item}
                         </a>
