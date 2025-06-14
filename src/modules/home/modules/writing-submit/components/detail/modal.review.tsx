@@ -14,9 +14,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ProductDescriptionEditor from "../quill";
 import { DATA } from "@/utils/data";
+import { AccountService } from "@/services/account";
 
 export interface Teacher {
   _id: string;
@@ -33,9 +34,9 @@ export interface Teacher {
 
 export interface ReviewData {
   task: number;
-  overall: string;
+  score: string;
   teacher: string;
-  comment: string;
+  feedback: string;
 }
 
 interface ModalReviewProps {
@@ -51,28 +52,41 @@ export function ModalReview({
 }: ModalReviewProps) {
   const { toast } = useToast();
 
+  const dialogCloseRef = useRef<HTMLButtonElement>(null);
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [overall, setOverall] = useState<string>(review?.overall || "");
+  const [score, setScore] = useState<string>(review?.score || "");
   const [teacher, setTeacher] = useState<string>(review?.teacher || "");
-  const [comment, setComment] = useState<string>(review?.comment || "");
+  const [feedback, setFeedback] = useState<string>(review?.feedback || "");
   const [data, setData] = useState<Teacher[]>([]);
 
-  const IELTS_SCORES = [
-    { id: 1, value: "9.0", label: "9.0" },
-    { id: 2, value: "8.5", label: "8.5" },
-    { id: 3, value: "8.0", label: "8.0" },
-    { id: 4, value: "7.5", label: "7.5" },
-    { id: 5, value: "7.0", label: "7.0" },
-    { id: 6, value: "6.5", label: "6.5" },
-    { id: 7, value: "6.0", label: "6.0" },
-    { id: 8, value: "5.5", label: "5.5" },
-    { id: 9, value: "5.0", label: "5.0" },
-    { id: 10, value: "4.5", label: "4.5" },
-    { id: 11, value: "4.0", label: "4.0" },
-  ];
+  const init = async () => {
+    try {
+      const response = await AccountService.getAll();
+
+      if (response) {
+        setData(response);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Không thể lấy danh sách giáo viên.",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi khi lấy danh sách giáo viên.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    init();
+  }, []);
 
   const validateForm = () => {
-    if (!overall.trim()) {
+    if (!score.trim()) {
       toast({
         variant: "destructive",
         title: "Vui lòng chọn điểm Overall IELTS.",
@@ -88,7 +102,7 @@ export function ModalReview({
       return false;
     }
 
-    if (!comment.trim()) {
+    if (!feedback.trim()) {
       toast({
         variant: "destructive",
         title: "Vui lòng nhập nội dung đánh giá.",
@@ -101,13 +115,13 @@ export function ModalReview({
 
   useEffect(() => {
     if (review) {
-      setOverall(review.overall);
+      setScore(review.score);
       setTeacher(review.teacher);
-      setComment(review.comment);
+      setFeedback(review.feedback);
     } else {
-      setOverall("");
+      setScore("");
       setTeacher("");
-      setComment("");
+      setFeedback("");
     }
   }, [review]);
 
@@ -115,18 +129,31 @@ export function ModalReview({
     if (!validateForm()) return;
     setIsLoading(true);
 
-    const reviewData: ReviewData = {
-      task,
-      overall,
-      teacher,
-      comment,
-    };
+    try {
+      const reviewData: ReviewData = {
+        task,
+        score,
+        teacher,
+        feedback,
+      };
 
-    onReviewSubmit(reviewData);
+      onReviewSubmit(reviewData);
 
-    console.log("Review data submitted:", reviewData);
-
-    setIsLoading(false);
+      if (dialogCloseRef.current) {
+        dialogCloseRef.current.click();
+      }
+      toast({
+        title: `Đánh giá Writing Task ${task} đã được lưu và đóng.`,
+      });
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi khi lưu đánh giá.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -158,13 +185,13 @@ export function ModalReview({
           <div className="overflow-y-auto max-h-[60vh] scroll-bar-style">
             <div className="flex flex-col justify-start items-start gap-2 overflow-auto h-screen max-h-[80vh] scroll-bar-style">
               <Label htmlFor="overall" className="text-[16px] mt-2">
-                Overall
+                Score
               </Label>
               <div className="w-full grid items-center gap-4">
                 <select
                   id="overall"
-                  value={overall}
-                  onChange={(e) => setOverall(e.target.value)}
+                  value={score}
+                  onChange={(e) => setScore(e.target.value)}
                   className="col-span-3 p-2 border rounded"
                 >
                   <option value="" disabled>
@@ -200,8 +227,8 @@ export function ModalReview({
               <div className="w-full grid items-center gap-4 mt-2">
                 <ProductDescriptionEditor
                   key={`editor-task-${task}`}
-                  value={comment}
-                  onChange={setComment}
+                  value={feedback}
+                  onChange={setFeedback}
                   title={`Đánh giá cho Writing Task ${task}`}
                 />
               </div>
@@ -214,6 +241,7 @@ export function ModalReview({
               type="button"
               variant="secondary"
               className="!px-10 !text-[16px]"
+              ref={dialogCloseRef}
             >
               Huỷ
             </Button>

@@ -3,7 +3,7 @@ const BASE_URL = "https://api.farmcode.io.vn/v1";
 
 export const API = {
   // ACCOUNT
-  GET_ALL_ACCOUNTS: `${BASE_URL}/inanhtructuyen/account/`,
+  GET_ALL_ACCOUNTS: `${BASE_URL}/ielts-viet/account/`,
 
   //READING
   GET_ALL_READING: `${BASE_URL}/ielts-viet/test/skill?type=reading`,
@@ -29,6 +29,7 @@ export const API = {
   CREATE_WRITING: `${BASE_URL}/ielts-viet/test/skill`,
   DELETE_WRITING: `${BASE_URL}/ielts-viet/test/skill`,
   GET_ALL_WRITING_SUBMISSIONS: `${BASE_URL}/ielts-viet/test/writing-answer`,
+  SEND_EMAIL_WRITING: `${BASE_URL}/ielts-viet/send-email`,
 
   //FULLTEST
   GET_ALL_FULLTEST: `${BASE_URL}/ielts-viet/test`,

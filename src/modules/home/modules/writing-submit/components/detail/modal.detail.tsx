@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ModalReview } from "./modal.review";
+import { WritingService } from "@/services/writing";
 
 interface UserAnswers {
   question_id: string;
@@ -49,14 +50,15 @@ interface ReadingData {
 
 interface ReviewData {
   task: number;
-  overall: string;
+  score: string;
   teacher: string;
-  comment: string;
+  feedback: string;
 }
 
 export function ModalUpdateReading({ data }: { data: ReadingData }) {
   const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
+  const dialogCloseRef = useRef<HTMLButtonElement>(null);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [name, setName] = useState<string>("");
@@ -104,43 +106,6 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
     return true;
   };
 
-  // const handleSubmit = async () => {
-  //   if (!validateForm()) return;
-  //   setIsLoading(true);
-
-  //   const uploadMainImage: any = await UploadService.uploadToCloudinary([
-  //     mainPreview,
-  //   ]);
-
-  //   const transformedParts = parts.map((part) => ({
-  //     image: part.image,
-  //     content: part.content,
-  //     part_num: part.part_num,
-  //     question: part.question.map((question) => {
-  //       const transformedQuestion = { ...question };
-  //       if (question.q_type === "MP") {
-  //         transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
-  //       } else if (question.q_type === "FB") {
-  //         transformedQuestion.describe_image = "";
-  //       }
-  //       return transformedQuestion;
-  //     }),
-  //   }));
-
-  //   const body = {
-  //     parts: transformedParts,
-  //     name: name,
-  //     thumbnail: uploadMainImage[0]?.url || "",
-  //     time: time,
-  //   };
-  //   console.log("CHECK BODY", body);
-
-  //   const response = await ReadingService.updateReading(data?._id, body);
-
-  //   setIsLoading(false);
-  //   // window.location.href = "/?tab=reading";
-  // };
-
   const updateDOM = async (readingData: ReadingData) => {
     if (!readingData) return;
 
@@ -158,13 +123,13 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             image: answer.image || "",
           })
         ) || [
-            {
-              question_id: "",
-              answer: [],
-              topic: "",
-              image: "",
-            },
-          ],
+          {
+            question_id: "",
+            answer: [],
+            topic: "",
+            image: "",
+          },
+        ],
         is_complete: readingData.result[0]?.is_complete || null,
       },
       {
@@ -178,13 +143,13 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             image: answer.image || "",
           })
         ) || [
-            {
-              question_id: "",
-              answer: [],
-              topic: "",
-              image: "",
-            },
-          ],
+          {
+            question_id: "",
+            answer: [],
+            topic: "",
+            image: "",
+          },
+        ],
         is_complete: readingData.result[1]?.is_complete || null,
       },
     ];
@@ -192,19 +157,130 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
     setParts(updatedParts);
   };
 
-  const handleReviewSubmit = (review: ReviewData) => {
-    setReviews((prev) => {
-      const existingReviewIndex = prev.findIndex((r) => r.task === review.task);
-      if (existingReviewIndex !== -1) {
-        const updatedReviews = [...prev];
-        updatedReviews[existingReviewIndex] = review;
+  const hasCompleteFeedback = () => {
+    return (
+      reviews.length === 2 &&
+      reviews.some((r) => r.task === 1 && r.score && r.teacher && r.feedback) &&
+      reviews.some((r) => r.task === 2 && r.score && r.teacher && r.feedback)
+    );
+  };
+
+  const handleReviewSubmit = async (review: ReviewData) => {
+    try {
+      setIsLoading(true);
+
+      let updatedReviews: ReviewData[] = [];
+      setReviews((prev) => {
+        const existingReviewIndex = prev.findIndex(
+          (r) => r.task === review.task
+        );
+
+        if (existingReviewIndex !== -1) {
+          updatedReviews = [...prev];
+          updatedReviews[existingReviewIndex] = review;
+        } else {
+          updatedReviews = [...prev, review];
+        }
+
         return updatedReviews;
+      });
+
+      toast({
+        title: `Đánh giá Writing Task ${review.task} đã được lưu.`,
+      });
+
+      if (
+        updatedReviews.length === 2 &&
+        updatedReviews.some(
+          (r) => r.task === 1 && r.score && r.teacher && r.feedback
+        ) &&
+        updatedReviews.some(
+          (r) => r.task === 2 && r.score && r.teacher && r.feedback
+        )
+      ) {
+        const feedbackJson = {
+          test_id: data.test_id,
+          user_id: data.user_id,
+          test_name: data.test_name,
+          user_email: data.user_email,
+          writing_feedback: updatedReviews
+            .sort((a, b) => a.task - b.task)
+            .map((r) => ({
+              score: r.score,
+              teacher: r.teacher,
+              feedback: r.feedback,
+            })),
+        };
+        await WritingService.sendEmailWriting(feedbackJson);
+        if (dialogCloseRef.current) {
+          dialogCloseRef.current.click();
+        }
+        toast({
+          title: "Đã gửi email đánh giá cho cả hai Writing Tasks.",
+        });
+      } else {
+        toast({
+          variant: "default",
+          title:
+            "Vui lòng hoàn thành đánh giá cho cả hai Writing Tasks để gửi email.",
+        });
       }
-      return [...prev, review];
-    });
-    toast({
-      title: `Đánh giá Writing Task ${review.task} đã được lưu.`,
-    });
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi khi lưu hoặc gửi đánh giá.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    if (!hasCompleteFeedback()) {
+      toast({
+        variant: "destructive",
+        title:
+          "Vui lòng hoàn thành đánh giá cho cả hai Writing Tasks trước khi gửi.",
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const feedbackJson = {
+        test_id: data.test_id,
+        user_id: data.user_id,
+        test_name: data.test_name,
+        user_email: data.user_email,
+        writing_feedback: reviews
+          .sort((a, b) => a.task - b.task)
+          .map((r) => ({
+            score: r.score,
+            teacher: r.teacher,
+            feedback: r.feedback,
+          })),
+      };
+
+      await WritingService.sendEmailWriting(feedbackJson);
+
+      toast({
+        title: "Đã gửi email đánh giá thành công.",
+      });
+
+      if (dialogCloseRef.current) {
+        dialogCloseRef.current.click();
+      }
+    } catch (error) {
+      console.error("Error sending feedback email:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi khi gửi email đánh giá.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -241,10 +317,11 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           {parts.map((part, index) => (
             <button
               key={part.part_id}
-              className={`border rounded-xl px-5 py-1 ${activePart === index + 1
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-gray-200"
-                }`}
+              className={`border rounded-xl px-5 py-1 ${
+                activePart === index + 1
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-gray-200"
+              }`}
               onClick={() => setActivePart(index + 1)}
             >
               Writing Task {index + 1}
@@ -259,36 +336,42 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                   Writing Task {activePart} Submission
                 </h1>
                 <div className="mb-4 text-sm lg:text-[17px] font-semibold border-double border-2 border-black p-4 text-justify w-full">
-                  {activePart === 1
-                    ?
+                  {activePart === 1 ? (
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: (parts[0].user_answers[0].topic || "").replace(/\\/g, ""),
+                        __html: (parts[0].user_answers[0].topic || "").replace(
+                          /\\/g,
+                          ""
+                        ),
                       }}
                     />
-                    :
+                  ) : (
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: (parts[1].user_answers[0].topic || "").replace(/\\/g, ""),
+                        __html: (parts[1].user_answers[0].topic || "").replace(
+                          /\\/g,
+                          ""
+                        ),
                       }}
-                    />}
+                    />
+                  )}
                 </div>
                 <div>
                   {(activePart === 1
                     ? parts[0].user_answers[0].image
                     : parts[1].user_answers[0].image) && (
-                      <Image
-                        src={
-                          activePart === 1
-                            ? parts[0].user_answers[0].image
-                            : parts[1].user_answers[0].image
-                        }
-                        alt=""
-                        width={1000}
-                        height={1000}
-                        className="w-full h-full"
-                      />
-                    )}
+                    <Image
+                      src={
+                        activePart === 1
+                          ? parts[0].user_answers[0].image
+                          : parts[1].user_answers[0].image
+                      }
+                      alt=""
+                      width={1000}
+                      height={1000}
+                      className="w-full h-full"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -329,14 +412,20 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                 type="button"
                 variant="secondary"
                 className="!px-10 !text-[16px]"
+                ref={dialogCloseRef}
               >
                 Huỷ
               </Button>
             </DialogClose>
             <button
               type="submit"
-              // onClick={handleSubmit}
-              className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
+              onClick={handleSendFeedback}
+              disabled={!hasCompleteFeedback() || isLoading}
+              className={`flex flex-row justify-center items-center gap-2 text-white font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center ${
+                hasCompleteFeedback() && !isLoading
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
             >
               Gửi đánh giá
               {isLoading && <Loader className="animate-spin" size={17} />}
