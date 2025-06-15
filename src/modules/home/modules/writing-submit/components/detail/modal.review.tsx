@@ -18,6 +18,7 @@ import { useEffect, useRef, useState } from "react";
 import ProductDescriptionEditor from "../quill";
 import { DATA } from "@/utils/data";
 import { AccountService } from "@/services/account";
+import SearchSelect from "@/components/ui/search-select";
 
 export interface Teacher {
   _id: string;
@@ -167,7 +168,7 @@ export function ModalReview({
         </button>
       </DialogTrigger>
       <DialogContent
-        className="sm:max-w-[1200px] max-h-[90vh]"
+        className="sm:max-w-[1200px] max-h-[90vh] z-50"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -181,7 +182,7 @@ export function ModalReview({
             </span>
           </DialogDescription>
         </DialogHeader>
-        <div className="w-full grid grid-cols-1 gap-8">
+        <div className="w-full grid grid-cols-1 gap-8 z-50">
           <div className="overflow-y-auto max-h-[60vh] scroll-bar-style">
             <div className="flex flex-col justify-start items-start gap-2 overflow-auto h-screen max-h-[80vh] scroll-bar-style">
               <Label htmlFor="overall" className="text-[16px] mt-2">
@@ -223,6 +224,10 @@ export function ModalReview({
                     </option>
                   ))}
                 </select>
+                {/* <SearchSelect
+                  teacher={data}
+                  onSelect={(value) => setTeacher(value)}
+                /> */}
               </div>
               <div className="w-full grid items-center gap-4 mt-2">
                 <ProductDescriptionEditor
