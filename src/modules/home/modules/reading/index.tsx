@@ -3,11 +3,12 @@
 
 import Image from "next/image";
 import { ModalCreateReading } from "./components/create/modal.create";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ReadingService } from "@/services/reading";
-import { Loader } from "lucide-react";
+import { FileUp, Loader } from "lucide-react";
 import { IMAGES } from "@/utils/image";
 import { ModalUpdateReading } from "./components/update/modal.update";
+import { FileService } from "@/services/file";
 
 export default function Reading() {
   const COUNT = 5;
@@ -20,6 +21,9 @@ export default function Reading() {
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>(
     {}
   );
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -48,6 +52,31 @@ export default function Reading() {
     setTotalPage(Math.ceil(filteredData.length / COUNT));
     setCurrenPage(1);
     setCurrenData(filteredData.slice(0, COUNT));
+  };
+
+  const handleUploadFile = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    setIsUploading(true);
+    try {
+      await FileService.uploadFile(formData);
+      await init();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const init = async () => {
@@ -89,6 +118,31 @@ export default function Reading() {
           </div>
           <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
             <ModalCreateReading />
+            <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
+              <button
+                type="button"
+                onClick={handleUploadFile}
+                disabled={isUploading}
+                className="flex items-center justify-center text-indigo-600 bg-white border border-indigo-600 hover:opacity-80 disabled:bg-gray-400 font-medium rounded-lg text-md px-5 py-2 text-center"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader size={16} className="mr-2 animate-spin" /> Đang xử lý nội dung ...
+                  </>
+                ) : (
+                  <>
+                    <FileUp size={16} className="mr-2" /> Tải file lên
+                  </>
+                )}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                className="hidden"
+                accept="*/*"
+              />
+            </div>
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">
@@ -198,11 +252,10 @@ export default function Reading() {
                       <li key={index} onClick={() => selectPage(item)}>
                         <a
                           href="#"
-                          className={`${
-                            item === currenPage
+                          className={`${item === currenPage
                               ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
                               : "bg-white"
-                          } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
+                            } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
                         >
                           {item}
                         </a>

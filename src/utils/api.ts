@@ -51,4 +51,7 @@ export const API = {
   UPDATE_USER: `${BASE_URL}/ielts-viet/user`,
   CREATE_USER: `${BASE_URL}/ielts-viet/user`,
   DELETE_USER: `${BASE_URL}/ielts-viet/user`,
+
+  // FILE
+  UPLOAD_FILE: '/api/upload',
 };
