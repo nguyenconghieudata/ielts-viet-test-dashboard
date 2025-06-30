@@ -6,12 +6,15 @@ export async function POST(request: NextRequest) {
     let outputUrl = "";
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(API.READING_FILE_AI_PROCESS, {
-      method: "POST",
-      headers: myHeaders,
-      body: JSON.stringify(request.body),
-      redirect: "follow",
-    });
+    const payload = await request.json();
+    const response = await fetch(
+      "https://api.farmcode.io.vn/v1/ielts-viet/test/ask-chatgpt",
+      {
+        method: "POST",
+        headers: myHeaders,
+        body: JSON.stringify(payload),
+      }
+    );
     if (!response.ok) {
       throw new Error(`Failed - Status: ${response.status}`);
     }
@@ -23,6 +26,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("========= Error Create Reading File Ai:", error);
-    return false;
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
