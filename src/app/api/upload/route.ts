@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       total_pages: pages.length,
       created_at: new Date(),
     };
-    const filesCollection = await getCollection("ieltsviet_files");
+    const filesCollection = await getCollection("iatt_files");
     const result = await filesCollection.insertOne(documentData);
     const fileId = result.insertedId.toString();
     const responseData = {
