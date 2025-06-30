@@ -16,7 +16,7 @@ async function extractPDFContent(fileBuffer: ArrayBuffer): Promise<{
 }> {
   try {
     const buffer = Buffer.from(fileBuffer);
-    const blob = new Blob([buffer], { type: 'application/pdf' });
+    const blob = new Blob([buffer], { type: "application/pdf" });
     const loader = new PDFLoader(blob as any);
     const docs = await loader.load();
     const pages: PDFPageContent[] = docs.map((doc, index) => {
@@ -24,27 +24,30 @@ async function extractPDFContent(fileBuffer: ArrayBuffer): Promise<{
       return {
         page_number: doc.metadata.page || index + 1,
         content,
-        word_count: content.split(/\s+/).filter(word => word.length > 0).length,
-        character_count: content.length
+        word_count: content.split(/\s+/).filter((word) => word.length > 0)
+          .length,
+        character_count: content.length,
       };
     });
-    const fullContent = pages.map(page => page.content).join('\n\n');
-    console.log(`>>>>>>>>>> PDF processed: ${pages.length} pages, ${fullContent.length} characters`);
+    const fullContent = pages.map((page) => page.content).join("\n\n");
+    console.log(
+      `>>>>>>>>>> PDF processed: ${pages.length} pages, ${fullContent.length} characters`
+    );
     return {
       content: fullContent,
-      pages
+      pages,
     };
   } catch (langchainError) {
     console.log(`>>>>>>>>>> langchainError <<<<<<<<<<`);
     return {
-      content: '',
-      pages: []
+      content: "",
+      pages: [],
     };
   }
 }
 
 function validatePDFFile(fileType: string): boolean {
-  return fileType === 'application/pdf';
+  return fileType === "application/pdf";
 }
 
 export async function POST(request: NextRequest) {
@@ -95,7 +98,7 @@ export async function POST(request: NextRequest) {
       total_pages: pages.length,
       created_at: new Date(),
     };
-    const filesCollection = await getCollection("iatt_files");
+    const filesCollection = await getCollection("ieltsviet_files");
     const result = await filesCollection.insertOne(documentData);
     const fileId = result.insertedId.toString();
     const responseData = {
@@ -107,11 +110,11 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error('>>>>>>>>>> PDF Upload Error:', error);
+    console.error(">>>>>>>>>> PDF Upload Error:", error);
     return new Response(
       JSON.stringify({
         error: "PDF upload failed",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
       {
         status: 500,

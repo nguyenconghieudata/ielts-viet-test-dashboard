@@ -53,5 +53,8 @@ export const API = {
   DELETE_USER: `${BASE_URL}/ielts-viet/user`,
 
   // FILE
-  UPLOAD_FILE: '/api/upload',
+  UPLOAD_FILE: "/api/upload",
+  READING_FILE_AI: "/api/reading-file-ai",
+  READING_FILE_AI_PROCESS: `${BASE_URL}/ielts-viet/test/ask-chatgpt`,
+  GET_FILE_BY_ID: `${BASE_URL}/ielts-viet/file`,
 };

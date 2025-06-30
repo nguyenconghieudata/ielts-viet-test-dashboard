@@ -60,23 +60,36 @@ export default function Reading() {
     }
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     setIsUploading(true);
     try {
-      await FileService.uploadFile(formData);
+      const result = await FileService.uploadFile(formData);
+      const fileData = await FileService.getFileById(result.file_id);
+      // console.log("========= fileData", fileData.file_content);
+      const body = {
+        content: fileData.file_content,
+      };
+      const outputUrl = await ReadingService.createReadingFileAi(
+        JSON.stringify(body)
+      );
+      setIsUploading(false);
       await init();
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     } catch (error) {
-    } finally {
-      setIsUploading(false);
+      console.error("Failed to upload file:", error);
     }
+    // finally {
+    //   setIsUploading(false);
+    // }
   };
 
   const init = async () => {
@@ -127,7 +140,8 @@ export default function Reading() {
               >
                 {isUploading ? (
                   <>
-                    <Loader size={16} className="mr-2 animate-spin" /> Đang xử lý nội dung ...
+                    <Loader size={16} className="mr-2 animate-spin" /> Đang xử
+                    lý nội dung ...
                   </>
                 ) : (
                   <>
@@ -252,10 +266,11 @@ export default function Reading() {
                       <li key={index} onClick={() => selectPage(item)}>
                         <a
                           href="#"
-                          className={`${item === currenPage
+                          className={`${
+                            item === currenPage
                               ? "bg-indigo-50 hover:bg-indigo-100 text-gray-700"
                               : "bg-white"
-                            } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
+                          } flex items-center justify-center px-3 py-2 text-sm leading-tight text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700`}
                         >
                           {item}
                         </a>

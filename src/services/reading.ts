@@ -95,10 +95,41 @@ const getReadingById = async (id: string) => {
   }
 };
 
+const createReadingFileAi = async (payload: any) => {
+  try {
+    let outputUrl = "";
+    const myHeaders = new Headers();
+    console.log("========= payload", payload);
+
+    myHeaders.append("Content-Type", "application/json");
+    const response = await fetch(
+      `https://api.farmcode.io.vn/v1/ielts-viet/test/ask-chatgpt`,
+      {
+        method: "POST",
+        headers: myHeaders,
+        body: payload,
+      }
+    );
+    if (!response.ok) {
+      throw new Error(`Failed - Status: ${response.status}`);
+    }
+    const data = await response.json();
+    // if (data) {
+    //   outputUrl = data.outputUrl;
+    // }
+    // return outputUrl;
+    return data;
+  } catch (error: any) {
+    console.error("========= Error Create Reading File Ai:", error);
+    return false;
+  }
+};
+
 export const ReadingService = {
   getAll,
   createReading,
   updateReading,
   deleteReading,
   getReadingById,
+  createReadingFileAi,
 };

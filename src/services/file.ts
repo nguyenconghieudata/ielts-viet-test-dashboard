@@ -17,6 +17,23 @@ const uploadFile = async (formData: any) => {
   }
 };
 
+const getFileById = async (id: string) => {
+  try {
+    const response = await fetch(`${API.GET_FILE_BY_ID}/${id}`, {
+      method: "GET",
+    });
+    if (!response.ok) {
+      throw new Error(`Failed - Status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data.data;
+  } catch (error: any) {
+    console.error("========= Error Get File By Id:", error);
+    return false;
+  }
+};
+
 export const FileService = {
   uploadFile,
+  getFileById,
 };
