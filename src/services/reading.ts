@@ -114,6 +114,7 @@ const createReadingFileAi = async (payload: any) => {
       throw new Error(`Failed - Status: ${response.status}`);
     }
     const data = await response.json();
+    console.log("========= data", data);
     // if (data) {
     //   outputUrl = data.outputUrl;
     // }

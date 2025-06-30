@@ -71,8 +71,9 @@ export default function Reading() {
     setIsUploading(true);
     try {
       const result = await FileService.uploadFile(formData);
+      console.log("========= result", result);
       const fileData = await FileService.getFileById(result.file_id);
-      // console.log("========= fileData", fileData.file_content);
+      console.log("========= fileData", fileData.file_content);
       const body = {
         content: fileData.file_content,
       };
