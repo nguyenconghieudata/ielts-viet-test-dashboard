@@ -70,13 +70,7 @@ export default function Reading() {
     formData.append("file", file);
     setIsUploading(true);
     try {
-      // const result = await FileService.uploadFile(formData);
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json();
+      const result = await FileService.uploadFile(formData);
       console.log("========= result", result);
       const fileData = await FileService.getFileById(result.file_id);
       console.log("========= fileData", fileData.file_content);
