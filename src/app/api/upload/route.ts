@@ -16,7 +16,8 @@ async function extractPDFContent(fileBuffer: ArrayBuffer): Promise<{
 }> {
   try {
     const buffer = Buffer.from(fileBuffer);
-    const blob = new Blob([buffer], { type: "application/pdf" });
+    // const blob = new Blob([buffer], { type: "application/pdf" });
+    const blob = new Blob([fileBuffer], { type: "application/pdf" });
     const loader = new PDFLoader(blob as any);
     const docs = await loader.load();
     const pages: PDFPageContent[] = docs.map((doc, index) => {
