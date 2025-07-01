@@ -103,7 +103,8 @@ const createReadingFileAi = async (payload: any) => {
 
     myHeaders.append("Content-Type", "application/json");
     const response = await fetch(
-      `https://api.farmcode.io.vn/v1/ielts-viet/test/ask-chatgpt`,
+      // `https://api.farmcode.io.vn/v1/ielts-viet/test/ask-chatgpt`,
+      API.READING_FILE_AI,
       {
         method: "POST",
         headers: myHeaders,
@@ -115,11 +116,10 @@ const createReadingFileAi = async (payload: any) => {
     }
     const data = await response.json();
     console.log("========= data", data);
-    // if (data) {
-    //   outputUrl = data.outputUrl;
-    // }
-    // return outputUrl;
-    return data;
+    if (data) {
+      outputUrl = data.outputUrl;
+    }
+    return outputUrl;
   } catch (error: any) {
     console.error("========= Error Create Reading File Ai:", error);
     return false;
