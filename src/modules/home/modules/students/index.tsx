@@ -17,6 +17,9 @@ export default function Students() {
   const [totalPage, setTotalPage] = useState(0);
   const [currenPage, setCurrenPage] = useState(1);
   const [currenData, setCurrenData] = useState([]);
+  const [userTestCounts, setUserTestCounts] = useState<{
+    [userId: string]: number;
+  }>({});
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -69,6 +72,24 @@ export default function Students() {
   useEffect(() => {
     init();
   }, []);
+
+  useEffect(() => {
+    const fetchTestCounts = async () => {
+      const counts: { [userId: string]: number } = {};
+      await Promise.all(
+        currenData.map(async (user: any) => {
+          try {
+            const res = await UserService.getUserAnswerById(user._id);
+            counts[user._id] = Array.isArray(res) ? res.length : 0;
+          } catch {
+            counts[user._id] = 0;
+          }
+        })
+      );
+      setUserTestCounts(counts);
+    };
+    if (currenData.length > 0) fetchTestCounts();
+  }, [currenData]);
 
   return (
     <section className="p-4">
@@ -139,7 +160,12 @@ export default function Students() {
                           {item?.email}
                         </td>
                         <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          0
+                          {userTestCounts[item._id] ?? (
+                            <Loader
+                              className="inline animate-spin text-indigo-600"
+                              size={16}
+                            />
+                          )}
                         </td>
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           <ModalUpdateUser data={item} />

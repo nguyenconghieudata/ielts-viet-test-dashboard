@@ -47,6 +47,9 @@ interface SubmissionData {
   user_email: string;
   test_id: string;
   test_type: string;
+  correct_answer: number;
+  incorrect_answer: number;
+  score: number;
   result: ResultData[];
   user_avatar: string;
   user_name: string;
