@@ -21,7 +21,6 @@ import "@/styles/placeholder.css";
 import { ModalReview } from "./modal.review";
 import { WritingService } from "@/services/writing";
 import { QuestionsService } from "@/services/questions";
-import { log } from "node:console";
 
 interface UserAnswers {
   question_id: string;
@@ -131,13 +130,13 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             topic: answer.topic || "",
             image: answer.image || "",
           })) || [
-              {
-                question_id: "",
-                answer: [],
-                topic: "",
-                image: "",
-              },
-            ],
+            {
+              question_id: "",
+              answer: [],
+              topic: "",
+              image: "",
+            },
+          ],
           is_complete: resultItem?.is_complete || null,
         };
       }
@@ -169,13 +168,20 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
   };
 
   const hasCompleteFeedback = () => {
-    if (reviews.length === 1) return reviews.length === 1 &&
-      reviews.some((r) => r.task === 1 && r.score && r.teacher && r.feedback);
-    else if (reviews.length === 2) return (
-      reviews.length === 2 &&
-      reviews.some((r) => r.task === 1 && r.score && r.teacher && r.feedback) &&
-      reviews.some((r) => r.task === 2 && r.score && r.teacher && r.feedback)
-    );
+    if (data.result.length === 1) {
+      return (
+        reviews.length === 1 &&
+        reviews.some((r) => r.task === 1 && r.score && r.teacher && r.feedback)
+      );
+    } else if (data.result.length === 2) {
+      return (
+        reviews.length === 2 &&
+        reviews.some(
+          (r) => r.task === 1 && r.score && r.teacher && r.feedback
+        ) &&
+        reviews.some((r) => r.task === 2 && r.score && r.teacher && r.feedback)
+      );
+    }
   };
 
   const handleReviewSubmit = async (review: ReviewData) => {
@@ -213,12 +219,11 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           user_id: data.user_id,
           test_name: data.test_name,
           user_email: data.user_email,
-          writing_feedback: updatedReviews
-            .map((r) => ({
-              score: r.score,
-              teacher: r.teacher,
-              feedback: r.feedback,
-            })),
+          writing_feedback: updatedReviews.map((r) => ({
+            score: r.score,
+            teacher: r.teacher,
+            feedback: r.feedback,
+          })),
         };
         await WritingService.sendEmailWriting(feedbackJson);
         if (dialogCloseRef.current) {
@@ -287,7 +292,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
     try {
       setIsLoading(true);
 
-      let feedbackJson = {}
+      let feedbackJson = {};
 
       if (data.result.length < 2) {
         feedbackJson = {
@@ -301,10 +306,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             feedback: r.feedback || "",
           })),
         };
-
-        console.log("feedbackJson 1", JSON.stringify(feedbackJson));
-      }
-      else if (data.result.length === 2) {
+      } else if (data.result.length === 2) {
         feedbackJson = {
           test_id: data.test_id,
           user_id: data.user_id,
@@ -318,8 +320,6 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
               feedback: r.feedback,
             })),
         };
-        console.log("feedbackJson 2", feedbackJson);
-
       }
 
       await WritingService.sendEmailWriting(feedbackJson);
@@ -376,10 +376,11 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           {parts.map((part, index) => (
             <button
               key={part.part_id}
-              className={`border rounded-xl px-5 py-1 ${activePart === index + 1
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-gray-200"
-                }`}
+              className={`border rounded-xl px-5 py-1 ${
+                activePart === index + 1
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-gray-200"
+              }`}
               onClick={() => setActivePart(index + 1)}
             >
               Writing Task {index + 1}
@@ -416,18 +417,18 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                   {(activePart === 1
                     ? parts[0]?.user_answers?.[0]?.image
                     : parts[1]?.user_answers?.[0]?.image) && (
-                      <Image
-                        src={
-                          activePart === 1
-                            ? parts[0]?.user_answers?.[0]?.image
-                            : parts[1]?.user_answers?.[0]?.image
-                        }
-                        alt=""
-                        width={1000}
-                        height={1000}
-                        className="w-full h-full"
-                      />
-                    )}
+                    <Image
+                      src={
+                        activePart === 1
+                          ? parts[0]?.user_answers?.[0]?.image
+                          : parts[1]?.user_answers?.[0]?.image
+                      }
+                      alt=""
+                      width={1000}
+                      height={1000}
+                      className="w-full h-full"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -477,10 +478,11 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
               type="submit"
               onClick={handleSendFeedback}
               disabled={!hasCompleteFeedback() || isLoading}
-              className={`flex flex-row justify-center items-center gap-2 text-white font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center ${hasCompleteFeedback() && !isLoading
-                ? "bg-indigo-600 hover:bg-indigo-700"
-                : "bg-gray-400 cursor-not-allowed"
-                }`}
+              className={`flex flex-row justify-center items-center gap-2 text-white font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center ${
+                hasCompleteFeedback() && !isLoading
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              }`}
             >
               Gửi đánh giá
               {isLoading && <Loader className="animate-spin" size={17} />}
