@@ -340,14 +340,14 @@ export function ModalCreateReadingDetail({
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
-            ...part,
-            tempQuestions:
-              editingQuestionIndex !== null
-                ? part.tempQuestions.map((q, i) =>
-                    i === editingQuestionIndex ? newQuestion : q
-                  )
-                : [...part.tempQuestions, newQuestion],
-          }
+          ...part,
+          tempQuestions:
+            editingQuestionIndex !== null
+              ? part.tempQuestions.map((q, i) =>
+                i === editingQuestionIndex ? newQuestion : q
+              )
+              : [...part.tempQuestions, newQuestion],
+        }
         : part
     );
     onPartsUpdate(updatedParts);
@@ -391,9 +391,9 @@ export function ModalCreateReadingDetail({
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
-            ...part,
-            tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
-          }
+          ...part,
+          tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
+        }
         : part
     );
     onPartsUpdate(updatedParts);
@@ -506,11 +506,10 @@ export function ModalCreateReadingDetail({
               parts.map((part) => (
                 <button
                   key={part.part_num}
-                  className={`border rounded-md px-5 h-10 ${
-                    activePart === part.part_num
+                  className={`border rounded-md px-5 h-10 ${activePart === part.part_num
                       ? "border-indigo-600 bg-indigo-600 text-white"
                       : "border-gray-200"
-                  }`}
+                    }`}
                   onClick={() => setActivePart(part.part_num)}
                 >
                   Passage {part.part_num}
@@ -518,7 +517,7 @@ export function ModalCreateReadingDetail({
               ))}
           </div>
           {selectedTestType === "" && (
-            <div className="h-full w-full flex justify-center items-center">
+            <div className="col-span-3 h-full w-full flex justify-center items-center">
               Vui lòng chọn loại đề
             </div>
           )}
@@ -561,129 +560,129 @@ export function ModalCreateReadingDetail({
                 </div>
                 {parts.find((part) => part.part_num === activePart)
                   ?.selectedQuestionType && (
-                  <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
-                    {parts.find((part) => part.part_num === activePart)
-                      ?.selectedQuestionType === "MP" && (
-                      <div className="flex flex-col gap-4">
-                        <div className="font-bold text-lg">MULTIPLE CHOICE</div>
-                        <Label className="text-[14.5px]">
-                          Câu hỏi trắc nghiệm
-                        </Label>
-                        <input
-                          value={currentQuestion.question || ""}
-                          onChange={(e) =>
-                            setCurrentQuestion({
-                              ...currentQuestion,
-                              question: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập câu hỏi"
-                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                        />
-                        <Label className="text-[14.5px]">Lựa chọn</Label>
-                        {currentQuestion.choices?.map((choice, index) => (
-                          <div key={index} className="flex items-center gap-4">
+                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "MP" && (
+                          <div className="flex flex-col gap-4">
+                            <div className="font-bold text-lg">MULTIPLE CHOICE</div>
+                            <Label className="text-[14.5px]">
+                              Câu hỏi trắc nghiệm
+                            </Label>
                             <input
-                              value={choice}
+                              value={currentQuestion.question || ""}
                               onChange={(e) =>
-                                handleChoiceChange(index, e.target.value)
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  question: e.target.value,
+                                })
                               }
-                              placeholder={`Lựa chọn ${index + 1}`}
-                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                              placeholder="Nhập câu hỏi"
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                             />
-                            <input
-                              type="checkbox"
-                              checked={currentQuestion.answers?.includes(
-                                choice
-                              )}
-                              onChange={() => handleAnswerToggle(choice)}
-                              disabled={!choice}
-                            />
+                            <Label className="text-[14.5px]">Lựa chọn</Label>
+                            {currentQuestion.choices?.map((choice, index) => (
+                              <div key={index} className="flex items-center gap-4">
+                                <input
+                                  value={choice}
+                                  onChange={(e) =>
+                                    handleChoiceChange(index, e.target.value)
+                                  }
+                                  placeholder={`Lựa chọn ${index + 1}`}
+                                  className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                                />
+                                <input
+                                  type="checkbox"
+                                  checked={currentQuestion.answers?.includes(
+                                    choice
+                                  )}
+                                  onChange={() => handleAnswerToggle(choice)}
+                                  disabled={!choice}
+                                />
+                                <button
+                                  onClick={() => handleRemoveChoice(index)}
+                                  className="bg-red-500 text-white p-2 rounded-full"
+                                  disabled={currentQuestion.choices?.length === 1}
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ))}
                             <button
-                              onClick={() => handleRemoveChoice(index)}
-                              className="bg-red-500 text-white p-2 rounded-full"
-                              disabled={currentQuestion.choices?.length === 1}
+                              onClick={handleAddChoice}
+                              className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
                             >
-                              <X size={16} />
+                              <Plus />
                             </button>
                           </div>
-                        ))}
-                        <button
-                          onClick={handleAddChoice}
-                          className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
-                        >
-                          <Plus />
-                        </button>
+                        )}
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "FB" && (
+                          <div className="flex flex-col gap-4">
+                            <div className="font-bold text-lg">
+                              FILL IN THE BLANK
+                            </div>
+                            <Label className="text-[14.5px]">Đoạn đầu</Label>
+                            <input
+                              value={currentQuestion.start_passage || ""}
+                              onChange={(e) =>
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  start_passage: e.target.value,
+                                })
+                              }
+                              placeholder="Nhập đoạn đầu"
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                            />
+                            <Label className="text-[14.5px]">Đoạn cuối</Label>
+                            <input
+                              value={currentQuestion.end_passage || ""}
+                              onChange={(e) =>
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  end_passage: e.target.value,
+                                })
+                              }
+                              placeholder="Nhập đoạn cuối"
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                            />
+                            <Label className="text-[14.5px]">Đáp án</Label>
+                            <input
+                              value={currentQuestion.answers?.[0] || ""}
+                              onChange={(e) =>
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  answers: [e.target.value],
+                                })
+                              }
+                              placeholder="Nhập đáp án"
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                            />
+                          </div>
+                        )}
+                      <button
+                        onClick={handleAddQuestion}
+                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
+                      >
+                        {editingQuestionIndex !== null ? (
+                          <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
+                        ) : (
+                          <>
+                            <Plus /> Thêm câu hỏi
+                          </>
+                        )}
+                      </button>
+                      <div className="mt-4">
+                        <QuestionList
+                          questions={
+                            parts.find((part) => part.part_num === activePart)
+                              ?.tempQuestions || []
+                          }
+                          onEdit={handleEditQuestion}
+                          onDelete={handleDeleteQuestion}
+                        />
                       </div>
-                    )}
-                    {parts.find((part) => part.part_num === activePart)
-                      ?.selectedQuestionType === "FB" && (
-                      <div className="flex flex-col gap-4">
-                        <div className="font-bold text-lg">
-                          FILL IN THE BLANK
-                        </div>
-                        <Label className="text-[14.5px]">Đoạn đầu</Label>
-                        <input
-                          value={currentQuestion.start_passage || ""}
-                          onChange={(e) =>
-                            setCurrentQuestion({
-                              ...currentQuestion,
-                              start_passage: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập đoạn đầu"
-                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                        />
-                        <Label className="text-[14.5px]">Đoạn cuối</Label>
-                        <input
-                          value={currentQuestion.end_passage || ""}
-                          onChange={(e) =>
-                            setCurrentQuestion({
-                              ...currentQuestion,
-                              end_passage: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập đoạn cuối"
-                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                        />
-                        <Label className="text-[14.5px]">Đáp án</Label>
-                        <input
-                          value={currentQuestion.answers?.[0] || ""}
-                          onChange={(e) =>
-                            setCurrentQuestion({
-                              ...currentQuestion,
-                              answers: [e.target.value],
-                            })
-                          }
-                          placeholder="Nhập đáp án"
-                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                        />
-                      </div>
-                    )}
-                    <button
-                      onClick={handleAddQuestion}
-                      className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
-                    >
-                      {editingQuestionIndex !== null ? (
-                        <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
-                      ) : (
-                        <>
-                          <Plus /> Thêm câu hỏi
-                        </>
-                      )}
-                    </button>
-                    <div className="mt-4">
-                      <QuestionList
-                        questions={
-                          parts.find((part) => part.part_num === activePart)
-                            ?.tempQuestions || []
-                        }
-                        onEdit={handleEditQuestion}
-                        onDelete={handleDeleteQuestion}
-                      />
                     </div>
-                  </div>
-                )}
+                  )}
                 <QuestionList
                   questions={
                     parts.find((part) => part.part_num === activePart)
