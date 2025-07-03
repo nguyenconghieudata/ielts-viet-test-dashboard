@@ -90,6 +90,8 @@ export function ModalCreateListening() {
     },
   ]);
 
+  const [selectedTestType, setSelectedTestType] = useState<string>("");
+
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
   };
@@ -136,6 +138,24 @@ export function ModalCreateListening() {
     }
 
     return true;
+  };
+
+  const handleTestTypeChange = (value: string) => {
+    setSelectedTestType(value);
+    let numParts = 1;
+    if (value === "test-part-2") numParts = 2;
+    else if (value === "test-part-3") numParts = 3;
+    else if (value === "test-full") numParts = 4;
+    setParts(
+      Array.from({ length: numParts }, (_, i) => ({
+        image: "",
+        audio: "",
+        part_num: i + 1,
+        questions: [],
+        tempQuestions: [],
+        selectedQuestionType: null,
+      }))
+    );
   };
 
   const handleSubmit = async () => {
@@ -288,10 +308,13 @@ export function ModalCreateListening() {
                   className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                 />
               </div>
+
               <div className="mt-2">
                 <ModalCreateListeningDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
+                  selectedTestType={selectedTestType}
+                  onTestTypeChange={handleTestTypeChange}
                 />
               </div>
             </div>

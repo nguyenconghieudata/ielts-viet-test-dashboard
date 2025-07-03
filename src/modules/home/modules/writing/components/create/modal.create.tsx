@@ -62,6 +62,8 @@ export function ModalCreateWriting() {
     },
   ]);
 
+  const [selectedTestType, setSelectedTestType] = useState<string>("");
+
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
   };
@@ -122,6 +124,22 @@ export function ModalCreateWriting() {
     }
 
     return true;
+  };
+
+  const handleTestTypeChange = (value: string) => {
+    setSelectedTestType(value);
+    let numParts = 1;
+    if (value === "test-part-1") numParts = 1;
+    else if (value === "test-full") numParts = 2;
+    setParts(
+      Array.from({ length: numParts }, (_, i) => ({
+        image: "",
+        content: "",
+        part_num: i + 1,
+        questions: [],
+        tempQuestions: [],
+      }))
+    );
   };
 
   const handleImageUpload = useCallback(
@@ -348,6 +366,8 @@ export function ModalCreateWriting() {
                 <ModalCreateWritingDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
+                  selectedTestType={selectedTestType}
+                  onTestTypeChange={handleTestTypeChange}
                 />
               </div>
             </div>

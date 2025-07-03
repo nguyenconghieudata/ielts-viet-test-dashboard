@@ -68,35 +68,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
   const [time, setTime] = useState<number>(0);
   const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
 
-  const [parts, setParts] = useState<PartDetails[]>([
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 1,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 2,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 3,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-  ]);
+  const [parts, setParts] = useState<PartDetails[]>([]);
 
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
@@ -261,64 +233,29 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       setTime(readingData.time);
       setMainPreview(readingData.thumbnail);
 
-      const readingParts1 = await QuestionsService.getQuestionsById(
-        readingData.parts[0]
-      );
+      // Dynamically fetch all parts based on the actual data
+      const partsPromises = readingData.parts.map(async (partId: string) => {
+        return await QuestionsService.getQuestionsById(partId);
+      });
 
-      const readingParts2 = await QuestionsService.getQuestionsById(
-        readingData.parts[1]
-      );
-      const readingParts3 = await QuestionsService.getQuestionsById(
-        readingData.parts[2]
-      );
+      const partsData = await Promise.all(partsPromises);
 
-      const updatedParts = [
-        {
-          _id: readingParts1._id,
-          image: readingParts1.image || "",
-          content: readingParts1.content || "",
-          part_num: 1,
-          question: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts2._id,
-          image: readingParts2.image || "",
-          content: readingParts2.content || "",
-          part_num: 2,
-          question: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts3._id,
-          image: readingParts3.image || "",
-          content: readingParts3.content || "",
-          part_num: 3,
-          question: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-      ];
+      // Create parts array dynamically based on actual data
+      const updatedParts: PartDetails[] = partsData.map((partData, index) => ({
+        _id: partData._id,
+        image: partData.image || "",
+        content: partData.content || "",
+        part_num: index + 1,
+        question: (partData.question || []).map((q: any) => ({
+          ...q,
+          answer: q.answer || q.answers || [],
+        })),
+        tempQuestions: (partData.question || []).map((q: any) => ({
+          ...q,
+          answer: q.answer || q.answers || [],
+        })),
+        selectedQuestionType: null,
+      }));
 
       setParts(updatedParts);
       setIsLoadingDOM(false);

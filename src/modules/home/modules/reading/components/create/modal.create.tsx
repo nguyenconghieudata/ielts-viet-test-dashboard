@@ -54,6 +54,7 @@ export function ModalCreateReading() {
 
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
+  const [selectedTestType, setSelectedTestType] = useState<string>("");
 
   const [parts, setParts] = useState<PartDetails[]>([
     {
@@ -343,6 +344,8 @@ export function ModalCreateReading() {
                 <ModalCreateReadingDetail
                   parts={parts}
                   onPartsUpdate={handlePartsUpdate}
+                  selectedTestType={selectedTestType}
+                  onTestTypeChange={setSelectedTestType}
                 />
               </div>
             </div>

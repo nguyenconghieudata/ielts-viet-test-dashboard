@@ -59,24 +59,7 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
-  const [parts, setParts] = useState<PartDetails[]>([
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 1,
-      questions: [],
-      tempQuestions: [],
-    },
-    {
-      _id: "",
-      image: "",
-      content: "",
-      part_num: 2,
-      questions: [],
-      tempQuestions: [],
-    },
-  ]);
+  const [parts, setParts] = useState<PartDetails[]>([]);
 
   const handlePartsUpdate = useCallback((updatedParts: PartDetails[]) => {
     setParts(updatedParts);
@@ -211,8 +194,7 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    console.log('CHECK PART: ', parts);
-
+    console.log("CHECK PART: ", parts);
 
     try {
       const thumbnailUrl = mainPreview?.startsWith("data:image")
@@ -246,7 +228,6 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
         thumbnail: thumbnailUrl || "",
         time: time,
       };
-
 
       const response = await WritingService.updateWriting(data._id, body);
       if (response) {
@@ -299,41 +280,45 @@ export function ModalUpdateWriting({ data }: { data: WritingData }) {
     setMainPreview(writingData.thumbnail);
 
     try {
-      const [writingParts1, writingParts2] = await Promise.all([
-        QuestionsService.getQuestionsById(writingData.parts[0]),
-        QuestionsService.getQuestionsById(writingData.parts[1]),
-      ]);
+      // const [writingParts1, writingParts2] = await Promise.all([
+      //   QuestionsService.getQuestionsById(writingData.parts[0]),
+      //   QuestionsService.getQuestionsById(writingData.parts[1]),
+      // ]);
 
-      const updatedParts = [
-        {
-          _id: writingData.parts[0] || "",
-          image: writingParts1.image || "",
-          content:
-            writingParts1.content || writingParts1.question?.[0]?.content || "",
-          part_num: 1,
-          questions: (writingParts1.question || []).map((q: any) => ({
-            _id: q._id || "",
-            q_type: "W" as const,
-            image: q.image || "",
-            topic: q.content || "",
-          })),
-          tempQuestions: [],
-        },
-        {
-          _id: writingData.parts[1] || "",
-          image: writingParts2.image || "",
-          content:
-            writingParts2.content || writingParts2.question?.[0]?.content || "",
-          part_num: 2,
-          questions: (writingParts2.question || []).map((q: any) => ({
-            _id: q._id || "",
-            q_type: "W" as const,
-            image: q.image,
-            topic: q.content || "",
-          })),
-          tempQuestions: [],
-        },
-      ];
+      const partsPromises = writingData.parts.map(async (partId: string) => {
+        return await QuestionsService.getQuestionsById(partId);
+      });
+
+      const partsData = await Promise.all(partsPromises);
+
+      const updatedParts: PartDetails[] = partsData.map((partData, index) => ({
+        _id: writingData.parts[0] || "",
+        image: partData.image || "",
+        content: partData.content || partData.question?.[0]?.content || "",
+        part_num: index + 1,
+        questions: (partData.question || []).map((q: any) => ({
+          _id: q._id || "",
+          q_type: "W" as const,
+          image: q.image || "",
+          topic: q.content || "",
+        })),
+        tempQuestions: [],
+      }));
+      //   {
+      //     _id: writingData.parts[1] || "",
+      //     image: writingParts2.image || "",
+      //     content:
+      //       writingParts2.content || writingParts2.question?.[0]?.content || "",
+      //     part_num: 2,
+      //     questions: (writingParts2.question || []).map((q: any) => ({
+      //       _id: q._id || "",
+      //       q_type: "W" as const,
+      //       image: q.image,
+      //       topic: q.content || "",
+      //     })),
+      //     tempQuestions: [],
+      //   },
+      // ];
 
       setParts(updatedParts);
       setIsLoadingDOM(false);

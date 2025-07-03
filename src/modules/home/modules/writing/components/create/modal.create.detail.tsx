@@ -21,6 +21,13 @@ import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import Image from "next/image";
 import { UploadService } from "@/services/upload";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Question {
   q_type: "W";
@@ -39,11 +46,15 @@ interface PartDetails {
 interface ModalCreateWritingDetailProps {
   parts: PartDetails[];
   onPartsUpdate: (updatedParts: PartDetails[]) => void;
+  selectedTestType: string;
+  onTestTypeChange: (value: string) => void;
 }
 
 export function ModalCreateWritingDetail({
   parts,
   onPartsUpdate,
+  selectedTestType,
+  onTestTypeChange,
 }: ModalCreateWritingDetailProps) {
   const { toast } = useToast();
   const mainImageInputRef = useRef<HTMLInputElement>(null);
@@ -272,95 +283,113 @@ export function ModalCreateWritingDetail({
         </DialogHeader>
         <div className="w-full grid grid-cols-3 gap-8">
           <div className="col-span-3 flex flex-row gap-5">
-            {parts.map((part) => (
-              <button
-                key={part.part_num}
-                className={`border rounded-xl px-5 py-1 ${
-                  activePart === part.part_num
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-200"
-                }`}
-                onClick={() => setActivePart(part.part_num)}
-              >
-                Passage {part.part_num}
-              </button>
-            ))}
+            <div className="mb-4">
+              <Select value={selectedTestType} onValueChange={onTestTypeChange}>
+                <SelectTrigger className="!h-10 !w-[150px]">
+                  <SelectValue placeholder="Chọn loại đề" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="test-part-1">Đề lẻ 1 phần</SelectItem>
+                  <SelectItem value="test-full">Đề full</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedTestType !== "" &&
+              parts.map((part) => (
+                <button
+                  key={part.part_num}
+                  className={`border rounded-xl px-5 h-10 py-1 ${
+                    activePart === part.part_num
+                      ? "border-indigo-600 bg-indigo-600 text-white"
+                      : "border-gray-200"
+                  }`}
+                  onClick={() => setActivePart(part.part_num)}
+                >
+                  Passage {part.part_num}
+                </button>
+              ))}
           </div>
-          <div className="col-span-3">
-            <div className="grid grid-cols-12 gap-5 justify-start items-start overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
-              <div className="mt-2 col-span-4">
-                <div className="mb-6">
-                  <Label
-                    htmlFor="thumbnail"
-                    className="text-right !text-[16px]"
-                  >
-                    Ảnh mô tả
-                  </Label>
-                  <div className="mt-2">
-                    {(activePart === 1 ? !image1Preview : !image2Preview) &&
-                      !currentPart?.image && (
-                        <div
-                          onClick={handleUpdateMainImage}
-                          className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white px-5 py-16 text-sm font-medium text-gray-900 hover:bg-gray-50 hover:text-primary-700 cursor-pointer"
-                        >
-                          <div className="flex flex-col items-center">
-                            <span>+ Tải hình lên</span>
-                            <span className="text-xs text-gray-500">
-                              hoặc kéo thả file vào đây
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    <input
-                      type="file"
-                      ref={mainImageInputRef}
-                      onChange={handleMainImageChange}
-                      accept="image/*"
-                      className="hidden"
-                    />
-                    {(activePart === 1 ? image1Preview : image2Preview) ||
-                    currentPart?.image ? (
-                      <div className="mt-2">
-                        <div className="relative group w-full h-80">
-                          <div className="absolute top-0 left-0 right-0 bottom-0 group-hover:bg-black rounded-md opacity-25 z-0 transform duration-200"></div>
-                          <div className="cursor-pointer absolute top-[43%] left-[43%] hidden group-hover:flex z-10 transform duration-200">
-                            <div className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-full">
-                              <Upload
-                                onClick={handleUpdateMainImage}
-                                color="white"
-                                size={30}
-                              />
+          {selectedTestType === "" ? (
+            <div className="col-span-3 h-full w-full flex justify-center items-center">
+              Vui lòng chọn loại đề
+            </div>
+          ) : (
+            <div className="col-span-3">
+              <div className="grid grid-cols-12 gap-5 justify-start items-start overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
+                <div className="mt-2 col-span-4">
+                  <div className="mb-6">
+                    <Label
+                      htmlFor="thumbnail"
+                      className="text-right !text-[16px]"
+                    >
+                      Ảnh mô tả
+                    </Label>
+                    <div className="mt-2">
+                      {(activePart === 1 ? !image1Preview : !image2Preview) &&
+                        !currentPart?.image && (
+                          <div
+                            onClick={handleUpdateMainImage}
+                            className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white px-5 py-16 text-sm font-medium text-gray-900 hover:bg-gray-50 hover:text-primary-700 cursor-pointer"
+                          >
+                            <div className="flex flex-col items-center">
+                              <span>+ Tải hình lên</span>
+                              <span className="text-xs text-gray-500">
+                                hoặc kéo thả file vào đây
+                              </span>
                             </div>
                           </div>
-                          <Image
-                            src={
-                              activePart === 1
-                                ? image1Preview || currentPart?.image || ""
-                                : image2Preview || currentPart?.image || ""
-                            }
-                            alt="main-preview"
-                            className="w-full h-full object-cover rounded-md mt-2 border border-gray-200"
-                            width={1000}
-                            height={1000}
-                          />
+                        )}
+                      <input
+                        type="file"
+                        ref={mainImageInputRef}
+                        onChange={handleMainImageChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      {(activePart === 1 ? image1Preview : image2Preview) ||
+                      currentPart?.image ? (
+                        <div className="mt-2">
+                          <div className="relative group w-full h-80">
+                            <div className="absolute top-0 left-0 right-0 bottom-0 group-hover:bg-black rounded-md opacity-25 z-0 transform duration-200"></div>
+                            <div className="cursor-pointer absolute top-[43%] left-[43%] hidden group-hover:flex z-10 transform duration-200">
+                              <div className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-full">
+                                <Upload
+                                  onClick={handleUpdateMainImage}
+                                  color="white"
+                                  size={30}
+                                />
+                              </div>
+                            </div>
+                            <Image
+                              src={
+                                activePart === 1
+                                  ? image1Preview || currentPart?.image || ""
+                                  : image2Preview || currentPart?.image || ""
+                              }
+                              alt="main-preview"
+                              className="w-full h-full object-cover rounded-md mt-2 border border-gray-200"
+                              width={1000}
+                              height={1000}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ) : null}
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full grid items-center gap-4 col-span-8">
+                  <div className="w-full mt-2">
+                    <ProductDescriptionEditor
+                      key={`editor-${activePart}`}
+                      value={currentPart?.content || ""}
+                      onChange={handleContentChange}
+                      title={`Đề bài viết ${activePart}`}
+                    />
                   </div>
                 </div>
               </div>
-              <div className="w-full grid items-center gap-4 col-span-8">
-                <div className="w-full mt-2">
-                  <ProductDescriptionEditor
-                    key={`editor-${activePart}`}
-                    value={currentPart?.content || ""}
-                    onChange={handleContentChange}
-                    title={`Đề bài viết ${activePart}`}
-                  />
-                </div>
-              </div>
             </div>
-          </div>
+          )}
         </div>
         <DialogFooter>
           <DialogClose asChild>

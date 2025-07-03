@@ -68,44 +68,7 @@ export function ModalUpdateListening({ data }: { data: ListeningData }) {
   const [time, setTime] = useState<number>(0);
   const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
 
-  const [parts, setParts] = useState<PartDetails[]>([
-    {
-      _id: "",
-      image: "",
-      audio: "",
-      part_num: 1,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      audio: "",
-      part_num: 2,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      audio: "",
-      part_num: 3,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-    {
-      _id: "",
-      image: "",
-      audio: "",
-      part_num: 4,
-      question: [],
-      tempQuestions: [],
-      selectedQuestionType: null,
-    },
-  ]);
+  const [parts, setParts] = useState<PartDetails[]>([]);
 
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
@@ -270,82 +233,87 @@ export function ModalUpdateListening({ data }: { data: ListeningData }) {
       setTime(ListeningData.time);
       setMainPreview(ListeningData.thumbnail);
 
-      const ListeningParts1 = await QuestionsService.getQuestionsById(
-        ListeningData.parts[0]
-      );
+      // const ListeningParts1 = await QuestionsService.getQuestionsById(
+      //   ListeningData.parts[0]
+      // );
 
-      const ListeningParts2 = await QuestionsService.getQuestionsById(
-        ListeningData.parts[1]
-      );
-      const ListeningParts3 = await QuestionsService.getQuestionsById(
-        ListeningData.parts[2]
-      );
-      const ListeningParts4 = await QuestionsService.getQuestionsById(
-        ListeningData.parts[3]
-      );
+      // const ListeningParts2 = await QuestionsService.getQuestionsById(
+      //   ListeningData.parts[1]
+      // );
+      // const ListeningParts3 = await QuestionsService.getQuestionsById(
+      //   ListeningData.parts[2]
+      // );
+      // const ListeningParts4 = await QuestionsService.getQuestionsById(
+      //   ListeningData.parts[3]
+      // );
 
-      const updatedParts = [
-        {
-          _id: ListeningParts1._id || "",
-          image: ListeningParts1.image || "",
-          audio: ListeningParts1.audio || "",
-          part_num: 1,
-          question: (ListeningParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: ListeningParts2._id || "",
-          image: ListeningParts2.image || "",
-          audio: ListeningParts2.audio || "",
-          part_num: 2,
-          question: (ListeningParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: ListeningParts3._id || "",
-          image: ListeningParts3.image || "",
-          audio: ListeningParts3.audio || "",
-          part_num: 3,
-          question: (ListeningParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-        {
-          _id: ListeningParts4._id || "",
-          image: ListeningParts4.image || "",
-          audio: ListeningParts4.audio || "",
-          part_num: 4,
-          question: (ListeningParts4.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts4.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          selectedQuestionType: null,
-        },
-      ];
+      const partsPromises = ListeningData.parts.map(async (partId: string) => {
+        return await QuestionsService.getQuestionsById(partId);
+      });
+
+      const partsData = await Promise.all(partsPromises);
+
+      const updatedParts: PartDetails[] = partsData.map((partData, index) => ({
+        _id: partData._id || "",
+        image: partData.image || "",
+        audio: partData.audio || "",
+        part_num: index + 1,
+        question: (partData.question || []).map((q: any) => ({
+          ...q,
+          answer: q.answer || q.answers || [],
+        })),
+        tempQuestions: (partData.question || []).map((q: any) => ({
+          ...q,
+          answer: q.answer || q.answers || [],
+        })),
+        selectedQuestionType: null,
+      }));
+      // {
+      //   _id: ListeningParts2._id || "",
+      //   image: ListeningParts2.image || "",
+      //   audio: ListeningParts2.audio || "",
+      //   part_num: 2,
+      //   question: (ListeningParts2.question || []).map((q: any) => ({
+      //     ...q,
+      //     answer: q.answer || q.answers || [],
+      //   })),
+      //   tempQuestions: (ListeningParts2.question || []).map((q: any) => ({
+      //     ...q,
+      //     answer: q.answer || q.answers || [],
+      //   })),
+      //   selectedQuestionType: null,
+      // },
+      // {
+      //   _id: ListeningParts3._id || "",
+      //   image: ListeningParts3.image || "",
+      //   audio: ListeningParts3.audio || "",
+      //   part_num: 3,
+      //   question: (ListeningParts3.question || []).map((q: any) => ({
+      //     ...q,
+      //     answer: q.answer || q.answers || [],
+      //   })),
+      //   tempQuestions: (ListeningParts3.question || []).map((q: any) => ({
+      //     ...q,
+      //     answer: q.answer || q.answers || [],
+      //   })),
+      //   selectedQuestionType: null,
+      // },
+      // {
+      //   _id: ListeningParts4._id || "",
+      //   image: ListeningParts4.image || "",
+      //   audio: ListeningParts4.audio || "",
+      //   part_num: 4,
+      //   question: (ListeningParts4.question || []).map((q: any) => ({
+      //     ...q,
+      //     answer: q.answer || q.answers || [],
+      //   })),
+      //   tempQuestions: (ListeningParts4.question || []).map((q: any) => ({
+      //     ...q,
+      //     answer: q.answer || q.answers || [],
+      //   })),
+      //   selectedQuestionType: null,
+      // },
+      // ];
 
       setParts(updatedParts);
       setIsLoadingDOM(false);

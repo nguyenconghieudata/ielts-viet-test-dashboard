@@ -20,6 +20,7 @@ import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ModalReview } from "./modal.review";
 import { WritingService } from "@/services/writing";
+import { QuestionsService } from "@/services/questions";
 
 interface UserAnswers {
   question_id: string;
@@ -67,32 +68,32 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
   const [reviews, setReviews] = useState<ReviewData[]>([]);
 
   const [parts, setParts] = useState<ResultDetails[]>([
-    {
-      type: "W",
-      part_id: "",
-      user_answers: [
-        {
-          question_id: "",
-          answer: [],
-          topic: "",
-          image: "",
-        },
-      ],
-      is_complete: null,
-    },
-    {
-      type: "W",
-      part_id: "",
-      user_answers: [
-        {
-          question_id: "",
-          answer: [],
-          topic: "",
-          image: "",
-        },
-      ],
-      is_complete: null,
-    },
+    // {
+    //   type: "W",
+    //   part_id: "",
+    //   user_answers: [
+    //     {
+    //       question_id: "",
+    //       answer: [],
+    //       topic: "",
+    //       image: "",
+    //     },
+    //   ],
+    //   is_complete: null,
+    // },
+    // {
+    //   type: "W",
+    //   part_id: "",
+    //   user_answers: [
+    //     {
+    //       question_id: "",
+    //       answer: [],
+    //       topic: "",
+    //       image: "",
+    //     },
+    //   ],
+    //   is_complete: null,
+    // },
   ]);
 
   const validateForm = () => {
@@ -111,48 +112,57 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
 
     setName(readingData.test_name);
 
-    const updatedParts: ResultDetails[] = [
-      {
-        type: readingData.result[0]?.type || "W",
-        part_id: readingData.result[0]?.part_id || "",
-        user_answers: readingData?.result[0]?.user_answers?.map(
-          (answer: any) => ({
+    const partsPromises = readingData.result.map(async (resultItem) => {
+      return await QuestionsService.getQuestionsById(resultItem.part_id);
+    });
+
+    const partsData = await Promise.all(partsPromises);
+
+    const updatedParts: ResultDetails[] = partsData.map(
+      (partData: any, index: number) => {
+        const resultItem = readingData.result[index];
+        return {
+          type: resultItem?.type || "W",
+          part_id: resultItem?.part_id || "",
+          user_answers: resultItem?.user_answers?.map((answer: any) => ({
             question_id: answer.question_id || "",
             answer: answer.answer || [],
             topic: answer.topic || "",
             image: answer.image || "",
-          })
-        ) || [
-          {
-            question_id: "",
-            answer: [],
-            topic: "",
-            image: "",
-          },
-        ],
-        is_complete: readingData.result[0]?.is_complete || null,
-      },
-      {
-        type: readingData.result[1]?.type || "W",
-        part_id: readingData.result[1]?.part_id || "",
-        user_answers: readingData?.result[1]?.user_answers?.map(
-          (answer: any) => ({
-            question_id: answer.question_id || "",
-            answer: answer.answer || [],
-            topic: answer.topic || "",
-            image: answer.image || "",
-          })
-        ) || [
-          {
-            question_id: "",
-            answer: [],
-            topic: "",
-            image: "",
-          },
-        ],
-        is_complete: readingData.result[1]?.is_complete || null,
-      },
-    ];
+          })) || [
+            {
+              question_id: "",
+              answer: [],
+              topic: "",
+              image: "",
+            },
+          ],
+          is_complete: resultItem?.is_complete || null,
+        };
+      }
+    );
+
+    //   {
+    //     type: readingData.result[1]?.type || "W",
+    //     part_id: readingData.result[1]?.part_id || "",
+    //     user_answers: readingData?.result[1]?.user_answers?.map(
+    //       (answer: any) => ({
+    //         question_id: answer.question_id || "",
+    //         answer: answer.answer || [],
+    //         topic: answer.topic || "",
+    //         image: answer.image || "",
+    //       })
+    //     ) || [
+    //       {
+    //         question_id: "",
+    //         answer: [],
+    //         topic: "",
+    //         image: "",
+    //       },
+    //     ],
+    //     is_complete: readingData.result[1]?.is_complete || null,
+    //   },
+    // ];
 
     setParts(updatedParts);
   };
@@ -339,32 +349,30 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                   {activePart === 1 ? (
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: (parts[0].user_answers[0].topic || "").replace(
-                          /\\/g,
-                          ""
-                        ),
+                        __html: (
+                          parts[0]?.user_answers?.[0]?.topic || ""
+                        ).replace(/\\/g, ""),
                       }}
                     />
                   ) : (
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: (parts[1].user_answers[0].topic || "").replace(
-                          /\\/g,
-                          ""
-                        ),
+                        __html: (
+                          parts[1]?.user_answers?.[0]?.topic || ""
+                        ).replace(/\\/g, ""),
                       }}
                     />
                   )}
                 </div>
                 <div>
                   {(activePart === 1
-                    ? parts[0].user_answers[0].image
-                    : parts[1].user_answers[0].image) && (
+                    ? parts[0]?.user_answers?.[0]?.image
+                    : parts[1]?.user_answers?.[0]?.image) && (
                     <Image
                       src={
                         activePart === 1
-                          ? parts[0].user_answers[0].image
-                          : parts[1].user_answers[0].image
+                          ? parts[0]?.user_answers?.[0]?.image
+                          : parts[1]?.user_answers?.[0]?.image
                       }
                       alt=""
                       width={1000}
@@ -386,8 +394,8 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
                   id={`time`}
                   value={
                     activePart === 1
-                      ? parts[0].user_answers[0].answer[0]
-                      : parts[1].user_answers[0].answer[0]
+                      ? parts[0]?.user_answers?.[0]?.answer?.[0]
+                      : parts[1]?.user_answers?.[0]?.answer?.[0]
                   }
                   placeholder="Bài làm học viên"
                   className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"

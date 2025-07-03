@@ -52,7 +52,7 @@ interface SubmissionData {
 export function ModalHistoryUser({ data }: { data: SubmissionData[] }) {
   const [search, setSearch] = useState("");
   const [date, setDate] = useState("");
-  const [testType, setTestType] = useState<string | undefined>(undefined);
+  const [testType, setTestType] = useState<string | "A">("A");
 
   const calculateScore = (correctCount: number): number => {
     if (correctCount >= 0 && correctCount <= 1) return 0;
@@ -136,7 +136,8 @@ export function ModalHistoryUser({ data }: { data: SubmissionData[] }) {
       .toLowerCase()
       .includes(search.toLowerCase());
     const matchesDate = date ? item.created_at.slice(0, 10) === date : true;
-    const matchesType = testType ? item.test_type === testType : true;
+    const matchesType =
+      testType === "A" ? true : testType ? item.test_type === testType : true;
     return matchesName && matchesDate && matchesType;
   });
 
@@ -181,6 +182,7 @@ export function ModalHistoryUser({ data }: { data: SubmissionData[] }) {
                   <SelectValue placeholder="Chọn loại bài test" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="A">All</SelectItem>
                   <SelectItem value="R">Reading</SelectItem>
                   <SelectItem value="W">Writing</SelectItem>
                   <SelectItem value="L">Listening</SelectItem>
@@ -243,64 +245,66 @@ export function ModalHistoryUser({ data }: { data: SubmissionData[] }) {
               Học viên chưa có bài tập.
             </div>
           )}
-          <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-            <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400">
-              <tr>
-                <th scope="col" className="w-10 px-0 py-3 text-center">
-                  STT
-                </th>
-                <th scope="col" className="w-32 px-4 py-3">
-                  Tên bài test
-                </th>
-                <th scope="col" className="w-32 px-4 py-3 text-center">
-                  Số câu đúng
-                </th>
-                <th scope="col" className="w-32 px-4 py-3 text-center">
-                  Số câu sai
-                </th>
-                <th scope="col" className="w-32 px-4 py-3 text-center">
-                  Điểm số
-                </th>
-                <th scope="col" className="w-32 px-4 py-3 text-center">
-                  Thời gian nộp
-                </th>
-              </tr>
-            </thead>
-            {filteredData.length !== 0 && (
-              <tbody>
-                {filteredData.map((item: SubmissionData, index: number) => {
-                  const { score } = getTestScore(item.result);
-                  return (
-                    <tr
-                      key={index}
-                      className="border-b border-l border-r dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    >
-                      <td className="w-10 px-5 py-2 gap-3 items-center">
-                        {index + 1}
-                      </td>
-                      <td className="w-full px-4 py-2 gap-3 items-center">
-                        <span className="w-32 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
-                          {item?.test_name}
-                        </span>
-                      </td>
-                      <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                        {item?.correct_answer}
-                      </td>
-                      <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                        {item?.incorrect_answer}
-                      </td>
-                      <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                        {item?.score}
-                      </td>
-                      <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                        {HELPER.formatDate2(item?.created_at)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            )}
-          </table>
+          <div className="max-h-[30vh] overflow-y-auto scroll-bar-style">
+            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+              <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400 sticky -top-[0.7px]">
+                <tr>
+                  <th scope="col" className="w-10 px-0 py-3 text-center">
+                    STT
+                  </th>
+                  <th scope="col" className="w-32 px-4 py-3">
+                    Tên bài test
+                  </th>
+                  <th scope="col" className="w-32 px-4 py-3 text-center">
+                    Số câu đúng
+                  </th>
+                  <th scope="col" className="w-32 px-4 py-3 text-center">
+                    Số câu sai
+                  </th>
+                  <th scope="col" className="w-32 px-4 py-3 text-center">
+                    Điểm số
+                  </th>
+                  <th scope="col" className="w-32 px-4 py-3 text-center">
+                    Thời gian nộp
+                  </th>
+                </tr>
+              </thead>
+              {filteredData.length !== 0 && (
+                <tbody className="">
+                  {filteredData.map((item: SubmissionData, index: number) => {
+                    const { score } = getTestScore(item.result);
+                    return (
+                      <tr
+                        key={index}
+                        className="border-b border-l border-r dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <td className="w-10 px-5 py-2 gap-3 items-center">
+                          {index + 1}
+                        </td>
+                        <td className="w-full px-4 py-2 gap-3 items-center">
+                          <span className="w-32 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
+                            {item?.test_name}
+                          </span>
+                        </td>
+                        <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.correct_answer}
+                        </td>
+                        <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.incorrect_answer}
+                        </td>
+                        <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.score}
+                        </td>
+                        <td className="w-32 text-[14px] px-16 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {HELPER.formatDate2(item?.created_at)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              )}
+            </table>
+          </div>
           {filteredData.length === 0 && (
             <div className="w-full text-center mb-3">
               Học viên chưa có bài tập.

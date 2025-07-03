@@ -21,6 +21,13 @@ import "@/styles/placeholder.css";
 import { ModalChooseQuestion } from "../modal.choose.question";
 import { QuestionList } from "./question-list";
 import { UploadService } from "@/services/upload";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Question {
   q_type: "MP" | "FB";
@@ -43,11 +50,15 @@ interface PartDetails {
 interface ModalCreateListeningDetailProps {
   parts: PartDetails[];
   onPartsUpdate: (updatedParts: PartDetails[]) => void;
+  selectedTestType: string;
+  onTestTypeChange: (value: string) => void;
 }
 
 export function ModalCreateListeningDetail({
   parts,
   onPartsUpdate,
+  selectedTestType,
+  onTestTypeChange,
 }: ModalCreateListeningDetailProps) {
   const { toast } = useToast();
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -496,282 +507,317 @@ export function ModalCreateListeningDetail({
   const currentPart = parts.find((part) => part.part_num === activePart);
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+    <>
+      <Dialog>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
+          >
+            {!hasQuestions ? (
+              <>
+                <Plus size={16} className="mr-2" /> Tạo câu hỏi
+              </>
+            ) : (
+              <>Chỉnh sửa câu hỏi</>
+            )}
+          </button>
+        </DialogTrigger>
+        <DialogContent
+          className="sm:max-w-[1200px] max-h-[90vh]"
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {!hasQuestions ? (
-            <>
-              <Plus size={16} className="mr-2" /> Tạo câu hỏi
-            </>
-          ) : (
-            <>Chỉnh sửa câu hỏi</>
-          )}
-        </button>
-      </DialogTrigger>
-      <DialogContent
-        className="sm:max-w-[1200px] max-h-[90vh]"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            <span className="!text-[20px]">Tạo câu hỏi</span>
-          </DialogTitle>
-          <DialogDescription>
-            <span className="!text-[16px]">
-              Tạo đầy đủ nội dung và câu hỏi, sau đó nhấn{" "}
-              <strong className="text-indigo-600">Lưu</strong>
-            </span>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="w-full grid grid-cols-3 gap-8">
-          <div className="col-span-3 flex flex-row gap-5">
-            {parts.map((part) => (
-              <button
-                key={part.part_num}
-                className={`border rounded-xl px-5 py-1 ${
-                  activePart === part.part_num
-                    ? "border-indigo-600 bg-indigo-600 text-white"
-                    : "border-gray-200"
-                }`}
-                onClick={() => setActivePart(part.part_num)}
-              >
-                Passage {part.part_num}
-              </button>
-            ))}
-            {/* <button
-              onClick={handleAddPart}
-              className="border border-gray-200 rounded-xl px-5 py-1"
-            >
-              <Plus size={16} />
-            </button> */}
-          </div>
-          <div className="col-span-3">
-            <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
-              <div className="w-full grid items-center gap-4">
-                <div className="w-full mt-2">
-                  <Label className="text-[14.5px] mb-2 block">
-                    Audio for Passage {activePart}
-                  </Label>
-                  <div className="flex flex-col gap-4">
-                    {currentPart?.audio ? (
-                      <div className="flex flex-col gap-2">
-                        <audio
-                          controls
-                          src={currentPart.audio}
-                          className="w-full max-w-md"
-                        >
-                          Your browser does not support the audio element.
-                        </audio>
-                        <Button
-                          variant="outline"
-                          onClick={() => audioInputRef.current?.click()}
-                          disabled={isLoading}
-                        >
-                          <Upload className="mr-2 h-4 w-4" />
-                          Replace Audio
-                          {isAudioLoading && (
-                            <Loader className="ml-2 animate-spin" size={16} />
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => audioInputRef.current?.click()}
-                        disabled={isLoading}
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload Audio
-                        {isAudioLoading && (
-                          <Loader className="ml-2 animate-spin" size={16} />
-                        )}
-                      </Button>
-                    )}
-                    <input
-                      type="file"
-                      ref={audioInputRef}
-                      onChange={handleAudioFileChange}
-                      accept="audio/*"
-                      className="hidden"
-                    />
-                  </div>
-                </div>
+          <DialogHeader>
+            <DialogTitle>
+              <span className="!text-[20px]">Tạo câu hỏi</span>
+            </DialogTitle>
+            <DialogDescription>
+              <span className="!text-[16px]">
+                Tạo đầy đủ nội dung và câu hỏi, sau đó nhấn{" "}
+                <strong className="text-indigo-600">Lưu</strong>
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="w-full grid grid-cols-3 gap-8">
+            <div className="col-span-3 flex flex-row gap-5">
+              <div className="mb-4">
+                <Select
+                  value={selectedTestType}
+                  onValueChange={onTestTypeChange}
+                >
+                  <SelectTrigger className="!h-10 !w-[150px]">
+                    <SelectValue placeholder="Chọn loại đề" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="test-part-1">Đề lẻ 1 phần</SelectItem>
+                    <SelectItem value="test-part-2">Đề lẻ 2 phần</SelectItem>
+                    <SelectItem value="test-part-3">Đề lẻ 3 phần</SelectItem>
+                    <SelectItem value="test-full">Đề full</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="mt-2">
-                <ModalChooseQuestion
-                  onTypeSelected={(type) => {
-                    const updatedParts = parts.map((part) =>
-                      part.part_num === activePart
-                        ? { ...part, selectedQuestionType: type }
-                        : part
-                    );
-                    onPartsUpdate(updatedParts);
-                    setCurrentQuestion({
-                      q_type: type,
-                      choices: type === "MP" ? [""] : undefined,
-                      answers: [],
-                      question: "",
-                      start_passage: "",
-                      end_passage: "",
-                    });
-                    setEditingQuestionIndex(null);
-                  }}
-                />
-              </div>
-              {parts.find((part) => part.part_num === activePart)
-                ?.selectedQuestionType && (
-                <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
-                  {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "MP" && (
-                    <div className="flex flex-col gap-4">
-                      <div className="font-bold text-lg">MULTIPLE CHOICE</div>
-                      <Label className="text-[14.5px]">
-                        Câu hỏi trắc nghiệm
-                      </Label>
-                      <input
-                        value={currentQuestion.question || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            question: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập câu hỏi"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Lựa chọn</Label>
-                      {currentQuestion.choices?.map((choice, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <input
-                            value={choice}
-                            onChange={(e) =>
-                              handleChoiceChange(index, e.target.value)
-                            }
-                            placeholder={`Lựa chọn ${index + 1}`}
-                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
-                          />
-                          <input
-                            type="checkbox"
-                            checked={currentQuestion.answers?.includes(choice)}
-                            onChange={() => handleAnswerToggle(choice)}
-                            disabled={!choice}
-                          />
-                          <button
-                            onClick={() => handleRemoveChoice(index)}
-                            className="bg-red-500 text-white p-2 rounded-full"
-                            disabled={currentQuestion.choices?.length === 1}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        onClick={handleAddChoice}
-                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
-                      >
-                        <Plus />
-                      </button>
-                    </div>
-                  )}
-                  {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "FB" && (
-                    <div className="flex flex-col gap-4">
-                      <div className="font-bold text-lg">FILL IN THE BLANK</div>
-                      <Label className="text-[14.5px]">Đoạn đầu</Label>
-                      <input
-                        value={currentQuestion.start_passage || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            start_passage: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập đoạn đầu"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Đoạn cuối</Label>
-                      <input
-                        value={currentQuestion.end_passage || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            end_passage: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập đoạn cuối"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Đáp án</Label>
-                      <input
-                        value={currentQuestion.answers?.[0] || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            answers: [e.target.value],
-                          })
-                        }
-                        placeholder="Nhập đáp án"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                    </div>
-                  )}
-                  <button
-                    onClick={handleAddQuestion}
-                    className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
-                  >
-                    {editingQuestionIndex !== null ? (
-                      <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
-                    ) : (
-                      <>
-                        <Plus /> Thêm câu hỏi
-                      </>
-                    )}
-                  </button>
-                  <div className="mt-4">
-                    <QuestionList
-                      questions={
-                        parts.find((part) => part.part_num === activePart)
-                          ?.tempQuestions || []
-                      }
-                      onEdit={handleEditQuestion}
-                      onDelete={handleDeleteQuestion}
-                    />
-                  </div>
+              {selectedTestType !== "" && (
+                <div className="col-span-3 flex flex-row gap-5 h-10">
+                  {parts.map((part) => (
+                    <button
+                      key={part.part_num}
+                      className={`border rounded-xl px-5 py-1 ${
+                        activePart === part.part_num
+                          ? "border-indigo-600 bg-indigo-600 text-white"
+                          : "border-gray-200"
+                      }`}
+                      onClick={() => setActivePart(part.part_num)}
+                    >
+                      Passage {part.part_num}
+                    </button>
+                  ))}
                 </div>
               )}
-              <QuestionList
-                questions={
-                  parts.find((part) => part.part_num === activePart)
-                    ?.questions || []
-                }
-              />
             </div>
+
+            {selectedTestType === "" ? (
+              <div className="col-span-3 h-full w-full flex justify-center items-center">
+                Vui lòng chọn loại đề
+              </div>
+            ) : (
+              <div className="col-span-3">
+                <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[60vh] pr-0 scroll-bar-style">
+                  <div className="w-full grid items-center gap-4">
+                    <div className="w-full mt-2">
+                      <Label className="text-[14.5px] mb-2 block">
+                        Audio for Passage {activePart}
+                      </Label>
+                      <div className="flex flex-col gap-4">
+                        {currentPart?.audio ? (
+                          <div className="flex flex-col gap-2">
+                            <audio
+                              controls
+                              src={currentPart.audio}
+                              className="w-full max-w-md"
+                            >
+                              Your browser does not support the audio element.
+                            </audio>
+                            <Button
+                              variant="outline"
+                              onClick={() => audioInputRef.current?.click()}
+                              disabled={isLoading}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              Replace Audio
+                              {isAudioLoading && (
+                                <Loader
+                                  className="ml-2 animate-spin"
+                                  size={16}
+                                />
+                              )}
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            onClick={() => audioInputRef.current?.click()}
+                            disabled={isLoading}
+                          >
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload Audio
+                            {isAudioLoading && (
+                              <Loader className="ml-2 animate-spin" size={16} />
+                            )}
+                          </Button>
+                        )}
+                        <input
+                          type="file"
+                          ref={audioInputRef}
+                          onChange={handleAudioFileChange}
+                          accept="audio/*"
+                          className="hidden"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <ModalChooseQuestion
+                      onTypeSelected={(type) => {
+                        const updatedParts = parts.map((part) =>
+                          part.part_num === activePart
+                            ? { ...part, selectedQuestionType: type }
+                            : part
+                        );
+                        onPartsUpdate(updatedParts);
+                        setCurrentQuestion({
+                          q_type: type,
+                          choices: type === "MP" ? [""] : undefined,
+                          answers: [],
+                          question: "",
+                          start_passage: "",
+                          end_passage: "",
+                        });
+                        setEditingQuestionIndex(null);
+                      }}
+                    />
+                  </div>
+                  {parts.find((part) => part.part_num === activePart)
+                    ?.selectedQuestionType && (
+                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "MP" && (
+                        <div className="flex flex-col gap-4">
+                          <div className="font-bold text-lg">
+                            MULTIPLE CHOICE
+                          </div>
+                          <Label className="text-[14.5px]">
+                            Câu hỏi trắc nghiệm
+                          </Label>
+                          <input
+                            value={currentQuestion.question || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                question: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập câu hỏi"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Lựa chọn</Label>
+                          {currentQuestion.choices?.map((choice, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-4"
+                            >
+                              <input
+                                value={choice}
+                                onChange={(e) =>
+                                  handleChoiceChange(index, e.target.value)
+                                }
+                                placeholder={`Lựa chọn ${index + 1}`}
+                                className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                              />
+                              <input
+                                type="checkbox"
+                                checked={currentQuestion.answers?.includes(
+                                  choice
+                                )}
+                                onChange={() => handleAnswerToggle(choice)}
+                                disabled={!choice}
+                              />
+                              <button
+                                onClick={() => handleRemoveChoice(index)}
+                                className="bg-red-500 text-white p-2 rounded-full"
+                                disabled={currentQuestion.choices?.length === 1}
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={handleAddChoice}
+                            className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                          >
+                            <Plus />
+                          </button>
+                        </div>
+                      )}
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "FB" && (
+                        <div className="flex flex-col gap-4">
+                          <div className="font-bold text-lg">
+                            FILL IN THE BLANK
+                          </div>
+                          <Label className="text-[14.5px]">Đoạn đầu</Label>
+                          <input
+                            value={currentQuestion.start_passage || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                start_passage: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập đoạn đầu"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Đoạn cuối</Label>
+                          <input
+                            value={currentQuestion.end_passage || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                end_passage: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập đoạn cuối"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Đáp án</Label>
+                          <input
+                            value={currentQuestion.answers?.[0] || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                answers: [e.target.value],
+                              })
+                            }
+                            placeholder="Nhập đáp án"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                        </div>
+                      )}
+                      <button
+                        onClick={handleAddQuestion}
+                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
+                      >
+                        {editingQuestionIndex !== null ? (
+                          <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
+                        ) : (
+                          <>
+                            <Plus /> Thêm câu hỏi
+                          </>
+                        )}
+                      </button>
+                      <div className="mt-4">
+                        <QuestionList
+                          questions={
+                            parts.find((part) => part.part_num === activePart)
+                              ?.tempQuestions || []
+                          }
+                          onEdit={handleEditQuestion}
+                          onDelete={handleDeleteQuestion}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <QuestionList
+                    questions={
+                      parts.find((part) => part.part_num === activePart)
+                        ?.questions || []
+                    }
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="secondary"
-              className="!px-10 !text-[16px]"
-              ref={dialogCloseRef}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                className="!px-10 !text-[16px]"
+                ref={dialogCloseRef}
+              >
+                Huỷ
+              </Button>
+            </DialogClose>
+            <button
+              type="submit"
+              onClick={handleSaveQuestions}
+              className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
             >
-              Huỷ
-            </Button>
-          </DialogClose>
-          <button
-            type="submit"
-            onClick={handleSaveQuestions}
-            className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
-          >
-            Lưu
-            {isLoading && <Loader className="animate-spin" size={17} />}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+              Lưu
+              {isLoading && <Loader className="animate-spin" size={17} />}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

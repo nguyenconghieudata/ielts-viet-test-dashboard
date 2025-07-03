@@ -116,19 +116,28 @@ export function ModalCreateFullTest() {
       const resW = await WritingService.getAll();
 
       if (resR && resR?.data?.length > 0) {
-        setReadings(resR.data);
+        const filterResR = resR.data.filter(
+          (item: any) => item.parts && item.parts.length === 3
+        );
+        setReadings(filterResR);
       } else {
         setReadings([]);
       }
 
       if (resL && resL?.data?.length > 0) {
-        setListenings(resL.data);
+        const filterResL = resL.data.filter(
+          (item: any) => item.parts && item.parts.length === 4
+        );
+        setListenings(filterResL);
       } else {
         setListenings([]);
       }
 
       if (resW && resW?.data?.length > 0) {
-        setWritings(resW.data);
+        const filterResW = resW.data.filter(
+          (item: any) => item.parts && item.parts.length === 2
+        );
+        setWritings(filterResW);
       } else {
         setWritings([]);
       }
