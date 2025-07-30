@@ -5,6 +5,9 @@ const uploadFile = async (formData: any) => {
     const response = await fetch(API.UPLOAD_FILE, {
       method: "POST",
       body: formData,
+      headers: {
+        // Remove Content-Type header to let the browser set it correctly with the boundary for FormData
+      },
     });
     if (!response.ok) {
       throw new Error(`Failed - Status: ${response.status}`);
