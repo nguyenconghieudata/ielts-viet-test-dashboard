@@ -1,6 +1,10 @@
 const BASE_URL = "https://api.farmcode.io.vn/v1";
 // const BASE_URL = 'http://localhost:8000/api/v1';
 
+// Determine if we're in a production environment
+// const isProduction = process.env.NODE_ENV === "production";
+// const APP_URL = isProduction ? "https://portal.ieltsviet.edu.vn" : "";
+
 export const API = {
   // ACCOUNT
   GET_ALL_ACCOUNTS: `${BASE_URL}/ielts-viet/account/`,

@@ -72,26 +72,37 @@ export default function Reading() {
     setIsUploading(true);
     try {
       const result = await FileService.uploadFile(formData);
-      // console.log("========= result", result);
+      if (!result || !result.file_id) {
+        throw new Error("Failed to upload file");
+      }
+
+      console.log("========= upload result", result);
       const fileData = await FileService.getFileById(result.file_id);
-      // console.log("========= fileData", fileData.file_content);
+
+      if (!fileData || !fileData.file_content) {
+        throw new Error("Failed to get file content");
+      }
+
+      console.log("========= file data retrieved successfully");
       const body = {
         content: fileData.file_content,
       };
       const outputUrl = await ReadingService.createReadingFileAi(
         JSON.stringify(body)
       );
-      setIsUploading(false);
       await init();
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch (error) {
       console.error("Failed to upload file:", error);
+      alert(
+        "Failed to upload file: " +
+          (error instanceof Error ? error.message : "Unknown error")
+      );
+    } finally {
+      setIsUploading(false);
     }
-    // finally {
-    //   setIsUploading(false);
-    // }
   };
 
   const init = async () => {
