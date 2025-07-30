@@ -54,6 +54,7 @@ function validatePDFFile(fileType: string): boolean {
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
+
     const file = formData.get("file") as File;
     if (!file) {
       return new Response(JSON.stringify({ error: "No file provided" }), {

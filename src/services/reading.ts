@@ -99,7 +99,7 @@ const createReadingFileAi = async (payload: any) => {
   try {
     let outputUrl = "";
     const myHeaders = new Headers();
-    console.log("========= payload", payload);
+    // console.log("========= payload", payload);
 
     myHeaders.append("Content-Type", "application/json");
     const response = await fetch(
@@ -115,7 +115,7 @@ const createReadingFileAi = async (payload: any) => {
       throw new Error(`Failed - Status: ${response.status}`);
     }
     const data = await response.json();
-    console.log("========= data", data);
+    // console.log("========= data", data);
     if (data) {
       outputUrl = data.outputUrl;
     }

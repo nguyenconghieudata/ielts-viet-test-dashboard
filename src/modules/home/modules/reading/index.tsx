@@ -67,13 +67,14 @@ export default function Reading() {
     if (!files || files.length === 0) return;
     const file = files[0];
     const formData = new FormData();
+    console.log("========= file", file);
     formData.append("file", file);
     setIsUploading(true);
     try {
       const result = await FileService.uploadFile(formData);
-      console.log("========= result", result);
+      // console.log("========= result", result);
       const fileData = await FileService.getFileById(result.file_id);
-      console.log("========= fileData", fileData.file_content);
+      // console.log("========= fileData", fileData.file_content);
       const body = {
         content: fileData.file_content,
       };
