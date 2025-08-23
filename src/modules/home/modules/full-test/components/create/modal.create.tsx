@@ -28,7 +28,7 @@ import { QuestionsService } from "@/services/questions";
 import { read } from "fs";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
   answers?: string[];
@@ -37,6 +37,16 @@ interface Question {
   isMultiple?: boolean;
   image?: string;
   topic?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // For MH, MF, TFNG - single answer
+  answer?: string;
 }
 
 interface FullTestDetails {
@@ -193,6 +203,48 @@ export function ModalCreateFullTest() {
     setIsLoading(true);
 
     try {
+      // Helper function to process questions with proper answer handling
+      const processQuestions = (questions: any[]) => {
+        return questions.map((q) => {
+          // Remove internal IDs
+          const { _id, part_id, ...rest } = q;
+
+          // Handle different question types
+          if (q.q_type === "MP") {
+            return {
+              ...rest,
+              isMultiple: Array.isArray(q.answer) && q.answer.length > 1,
+            };
+          } else if (q.q_type === "FB") {
+            return {
+              ...rest,
+              image: "",
+            };
+          } else if (q.q_type === "MH") {
+            return {
+              ...rest,
+              image: "",
+              // Ensure options field is included
+              options: q.options || [],
+            };
+          } else if (q.q_type === "MF") {
+            return {
+              ...rest,
+              image: "",
+              // Ensure options field is included
+              options: q.options || [],
+            };
+          } else if (q.q_type === "TFNG") {
+            return {
+              ...rest,
+              image: "",
+            };
+          }
+
+          return rest;
+        });
+      };
+
       // Fetch Reading Test
       let readingTestData: TestData | null = null;
       if (rId) {
@@ -227,16 +279,7 @@ export function ModalCreateFullTest() {
                   content: partResponse.content || "",
                   part_num: index + 1,
                   questions: Array.isArray(partQuestions.question)
-                    ? partQuestions.question.map(
-                        (q: {
-                          _id: string;
-                          part_id: string;
-                          [key: string]: any;
-                        }) => {
-                          const { _id, part_id, ...rest } = q;
-                          return rest;
-                        }
-                      )
+                    ? processQuestions(partQuestions.question)
                     : [],
                 };
               }
@@ -286,16 +329,7 @@ export function ModalCreateFullTest() {
                   audio: partResponse.audio || "",
                   part_num: index + 1,
                   questions: Array.isArray(partQuestions.question)
-                    ? partQuestions.question.map(
-                        (q: {
-                          _id: string;
-                          part_id: string;
-                          [key: string]: any;
-                        }) => {
-                          const { _id, part_id, ...rest } = q;
-                          return rest;
-                        }
-                      )
+                    ? processQuestions(partQuestions.question)
                     : [],
                 };
               }
@@ -346,16 +380,7 @@ export function ModalCreateFullTest() {
                 return {
                   part_num: index + 1,
                   questions: Array.isArray(partQuestions.question)
-                    ? partQuestions.question.map(
-                        (q: {
-                          _id: string;
-                          part_id: string;
-                          [key: string]: any;
-                        }) => {
-                          const { _id, part_id, ...rest } = q;
-                          return rest;
-                        }
-                      )
+                    ? processQuestions(partQuestions.question)
                     : [],
                 };
               }
@@ -377,11 +402,6 @@ export function ModalCreateFullTest() {
       setListeningData(listeningTestData);
       setWritingData(writingTestData);
 
-      // console.log("Fetched test data:", {
-      //   reading: readingTestData,
-      //   listening: listeningTestData,
-      //   writing: writingTestData,
-      // });
       console.log("Submit formats:", {
         readingSubmitFormat,
         listeningSubmitFormat,
@@ -547,6 +567,49 @@ export function ModalCreateFullTest() {
     try {
       const thumbnailUrl = await handleImageUpload(mainPreview!);
 
+      // Process the data to ensure proper handling of different question types
+      const processTestData = (testData: any) => {
+        if (!testData || !testData.parts) return testData;
+
+        return {
+          ...testData,
+          parts: testData.parts.map((part: any) => {
+            if (!part || !part.questions) return part;
+
+            return {
+              ...part,
+              questions: part.questions.map((q: any) => {
+                const processedQuestion = { ...q };
+
+                // Handle different question types
+                if (q.q_type === "MP") {
+                  processedQuestion.isMultiple =
+                    Array.isArray(q.answers) && q.answers.length > 1;
+                } else if (
+                  q.q_type === "MH" ||
+                  q.q_type === "MF" ||
+                  q.q_type === "TFNG"
+                ) {
+                  // Ensure these question types have the proper structure
+                  if (q.q_type === "MH") {
+                    processedQuestion.options = q.options || [];
+                  } else if (q.q_type === "MF") {
+                    processedQuestion.options = q.options || [];
+                  }
+                  // TFNG doesn't need special processing
+                }
+
+                return processedQuestion;
+              }),
+            };
+          }),
+        };
+      };
+
+      const processedReadingFormat = processTestData(readingSubmitFormat);
+      const processedListeningFormat = processTestData(listeningSubmitFormat);
+      const processedWritingFormat = processTestData(writingSubmitFormat);
+
       const body = {
         name,
         thumbnail: thumbnailUrl,
@@ -554,18 +617,20 @@ export function ModalCreateFullTest() {
           description ||
           "The Official Test with IELTS Reading and Listening test questions is designed in the format of a mock exam.",
         tests: [
-          readingSubmitFormat,
-          listeningSubmitFormat,
-          writingSubmitFormat,
+          processedReadingFormat,
+          processedListeningFormat,
+          processedWritingFormat,
         ],
       };
+
+      console.log("BODY", body);
 
       const response = await FullTestService.createFullTest(body);
 
       if (response) {
         toast({
           title: "Thành công",
-          description: "Bài viết đã được tạo thành công.",
+          description: "Bài test đã được tạo thành công.",
         });
         setMainPreview(null);
         setName("");
@@ -581,7 +646,7 @@ export function ModalCreateFullTest() {
       toast({
         variant: "destructive",
         title: "Lỗi",
-        description: "Không thể tạo bài viết. Vui lòng thử lại.",
+        description: "Không thể tạo bài test. Vui lòng thử lại.",
       });
     } finally {
       setIsLoading(false);

@@ -23,14 +23,25 @@ import { ListeningService } from "@/services/listening";
 import { ModalCreateListeningDetail } from "./modal.create.detail";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
   answers?: string[];
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // For MH, MF, TFNG - single answer
+  answer?: string;
+  // Additional properties
+  image?: string;
   isMultiple?: boolean;
-  describe_image?: string;
 }
 
 interface PartDetails {
@@ -39,7 +50,7 @@ interface PartDetails {
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 export function ModalCreateListening() {
@@ -162,40 +173,98 @@ export function ModalCreateListening() {
     if (!validateForm()) return;
     setIsLoading(true);
 
-    const uploadMainImage: any = await UploadService.uploadToCloudinary([
-      mainPreview,
-    ]);
+    try {
+      // Validate that all parts have audio
+      const partsWithoutAudio = parts.filter((part) => !part.audio);
+      if (partsWithoutAudio.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Missing audio",
+          description: `Please upload audio files for Passage ${partsWithoutAudio
+            .map((p) => p.part_num)
+            .join(", ")}`,
+        });
+        setIsLoading(false);
+        return;
+      }
 
-    const transformedParts = parts.map((part) => ({
-      image: part.image,
-      audio: part.audio,
-      part_num: part.part_num,
-      questions: part.questions.map((question) => {
-        const transformedQuestion = {
-          ...question,
-          q_type: question.q_type,
-        };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.describe_image = "";
-        }
-        return transformedQuestion;
-      }),
-    }));
+      // Transform parts similar to reading module
+      const transformedParts = parts.map((part) => ({
+        image: part.image,
+        audio: part.audio,
+        part_num: part.part_num,
+        questions: part.questions.map((question) => {
+          const transformedQuestion: any = {
+            ...question,
+            q_type: question.q_type,
+          };
 
-    const body = {
-      skill: "L",
-      parts: transformedParts,
-      name: name,
-      thumbnail: uploadMainImage[0]?.url || "",
-      time: time,
-    };
+          if (question.q_type === "MP") {
+            transformedQuestion.isMultiple =
+              (question.answers?.length || 0) > 1;
+            // Ensure these fields are explicitly set
+            transformedQuestion.question = question.question;
+            transformedQuestion.choices = question.choices;
+            transformedQuestion.answer = question.answers;
+          } else if (question.q_type === "FB") {
+            // Ensure these fields are explicitly set
+            transformedQuestion.start_passage = question.start_passage;
+            transformedQuestion.end_passage = question.end_passage;
+            transformedQuestion.answer = question.answers;
+          } else if (question.q_type === "MH") {
+            transformedQuestion.image = "";
+            // Ensure these fields are explicitly set
+            transformedQuestion.heading = question.heading;
+            transformedQuestion.paragraph_id = question.paragraph_id;
+            transformedQuestion.options = question.options || [];
+            transformedQuestion.answer = question.answer;
+          } else if (question.q_type === "MF") {
+            transformedQuestion.image = "";
+            // Ensure these fields are explicitly set
+            transformedQuestion.feature = question.feature;
+            transformedQuestion.options = question.options || [];
+            transformedQuestion.answer = question.answer;
+          } else if (question.q_type === "TFNG") {
+            transformedQuestion.image = "";
+            // Ensure these fields are explicitly set
+            transformedQuestion.sentence = question.sentence;
+            transformedQuestion.answer = question.answer;
+          }
 
-    const response = await ListeningService.createListening(body);
-    console.log("CHECK RESPONSE", response);
+          return transformedQuestion;
+        }),
+      }));
 
-    setIsLoading(false);
+      const uploadMainImage: any = await UploadService.uploadToCloudinary([
+        mainPreview,
+      ]);
+
+      const body = {
+        skill: "L",
+        parts: transformedParts,
+        name: name,
+        thumbnail: uploadMainImage[0]?.url || "",
+        time: time,
+      };
+
+      const response = await ListeningService.createListening(body);
+
+      toast({
+        title: "Listening created",
+        description: "Listening created successfully!",
+      });
+
+      window.location.href = "/?tab=listening";
+    } catch (error) {
+      console.error("Error creating listening:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to create listening",
+        description: "There was an error creating the listening.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

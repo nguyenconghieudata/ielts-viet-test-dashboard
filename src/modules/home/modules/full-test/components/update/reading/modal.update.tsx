@@ -27,14 +27,22 @@ import { TestService } from "@/services/test";
 interface Question {
   _id: string;
   part_id: string;
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answer?: string[];
+  answer?: string | string[];
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
   image?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface PartDetails {
@@ -44,7 +52,7 @@ interface PartDetails {
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ReadingData {
@@ -177,8 +185,23 @@ export function ModalUpdateReading({
         question: part.question.map((question) => {
           const transformedQuestion = { ...question };
           if (question.q_type === "MP") {
-            transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
+            transformedQuestion.isMultiple =
+              Array.isArray(question.answer) && question.answer.length > 1;
           } else if (question.q_type === "FB") {
+            transformedQuestion.image = "";
+          } else if (question.q_type === "MH") {
+            transformedQuestion.image = "";
+            // Ensure options field is included
+            if (!transformedQuestion.options) {
+              transformedQuestion.options = [];
+            }
+          } else if (question.q_type === "MF") {
+            transformedQuestion.image = "";
+            // Ensure options field is included
+            if (!transformedQuestion.options) {
+              transformedQuestion.options = [];
+            }
+          } else if (question.q_type === "TFNG") {
             transformedQuestion.image = "";
           }
           return transformedQuestion;
@@ -236,6 +259,7 @@ export function ModalUpdateReading({
 
   const updateDOM = async (readingData: ReadingData) => {
     if (readingData) {
+      console.log("READING DATA CHECKING", readingData);
       setName(readingData.name);
       setTime(readingData.time);
       setMainPreview(readingData.thumbnail);
@@ -251,20 +275,34 @@ export function ModalUpdateReading({
         readingData?.parts[2]
       );
 
+      // Helper function to process questions with proper answer handling
+      const processQuestions = (questions: any[]) => {
+        return (questions || []).map((q: any) => {
+          // Handle both answer and answers fields
+          let processedAnswer = q.answer || q.answers || [];
+
+          // For MH, MF, TFNG question types, ensure answer is a string
+          if (q.q_type === "MH" || q.q_type === "MF" || q.q_type === "TFNG") {
+            if (Array.isArray(processedAnswer) && processedAnswer.length > 0) {
+              processedAnswer = processedAnswer[0];
+            }
+          }
+
+          return {
+            ...q,
+            answer: processedAnswer,
+          };
+        });
+      };
+
       const updatedParts = [
         {
           _id: readingParts1._id,
           image: readingParts1.image || "",
           content: readingParts1.content || "",
           part_num: 1,
-          question: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(readingParts1.question),
+          tempQuestions: processQuestions(readingParts1.question),
           selectedQuestionType: null,
         },
         {
@@ -272,14 +310,8 @@ export function ModalUpdateReading({
           image: readingParts2.image || "",
           content: readingParts2.content || "",
           part_num: 2,
-          question: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(readingParts2.question),
+          tempQuestions: processQuestions(readingParts2.question),
           selectedQuestionType: null,
         },
         {
@@ -287,14 +319,8 @@ export function ModalUpdateReading({
           image: readingParts3.image || "",
           content: readingParts3.content || "",
           part_num: 3,
-          question: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(readingParts3.question),
+          tempQuestions: processQuestions(readingParts3.question),
           selectedQuestionType: null,
         },
       ];

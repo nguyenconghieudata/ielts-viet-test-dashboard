@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 
 interface ModalChooseQuestionProps {
-  onTypeSelected: (type: "MP" | "FB") => void;
+  onTypeSelected: (type: "MP" | "FB" | "MH" | "MF" | "TFNG") => void;
 }
 
 export function ModalChooseQuestion({
@@ -35,7 +35,7 @@ export function ModalChooseQuestion({
             <span className="!text-[16px]">Chọn một loại câu hỏi để tạo.</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-row gap-5">
+        <div className="flex flex-row gap-5 flex-wrap">
           <button
             className="cursor-pointer border rounded-xl px-5 py-1 border-indigo-600 bg-indigo-600 text-white"
             onClick={() => onTypeSelected("MP")}
@@ -47,6 +47,24 @@ export function ModalChooseQuestion({
             onClick={() => onTypeSelected("FB")}
           >
             Fill in the blank
+          </button>
+          <button
+            className="cursor-pointer border rounded-xl px-5 py-1 border-indigo-600 bg-indigo-600 text-white"
+            onClick={() => onTypeSelected("MH")}
+          >
+            Matching Headings
+          </button>
+          <button
+            className="cursor-pointer border rounded-xl px-5 py-1 border-indigo-600 bg-indigo-600 text-white"
+            onClick={() => onTypeSelected("MF")}
+          >
+            Matching Features
+          </button>
+          <button
+            className="cursor-pointer border rounded-xl px-5 py-1 border-indigo-600 bg-indigo-600 text-white"
+            onClick={() => onTypeSelected("TFNG")}
+          >
+            True/False/Not Given
           </button>
         </div>
       </DialogContent>

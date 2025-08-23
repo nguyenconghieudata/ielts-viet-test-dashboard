@@ -27,14 +27,24 @@ import { TestService } from "@/services/test";
 interface Question {
   _id: string;
   part_id: string;
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answer?: string[];
+  answer?: string | string[];
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
   describe_image?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // Common property
+  image?: string;
 }
 
 interface PartDetails {
@@ -44,7 +54,7 @@ interface PartDetails {
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ListeningData {
@@ -244,9 +254,24 @@ export function ModalUpdateListening({
       question: part.question.map((question) => {
         const transformedQuestion = { ...question };
         if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
+          transformedQuestion.isMultiple =
+            Array.isArray(question.answer) && question.answer.length > 1;
         } else if (question.q_type === "FB") {
           transformedQuestion.describe_image = "";
+        } else if (question.q_type === "MH") {
+          transformedQuestion.image = "";
+          // Ensure options field is included
+          if (!transformedQuestion.options) {
+            transformedQuestion.options = [];
+          }
+        } else if (question.q_type === "MF") {
+          transformedQuestion.image = "";
+          // Ensure options field is included
+          if (!transformedQuestion.options) {
+            transformedQuestion.options = [];
+          }
+        } else if (question.q_type === "TFNG") {
+          transformedQuestion.image = "";
         }
         return transformedQuestion;
       }),
@@ -265,7 +290,7 @@ export function ModalUpdateListening({
 
     toast({
       title: "Thành công",
-      description: "Dữ liệu bài đọc đã được cập nhật.",
+      description: "Dữ liệu bài nghe đã được cập nhật.",
     });
   };
 
@@ -296,20 +321,34 @@ export function ModalUpdateListening({
         ListeningData.parts[3]
       );
 
+      // Helper function to process questions with proper answer handling
+      const processQuestions = (questions: any[]) => {
+        return (questions || []).map((q: any) => {
+          // Handle both answer and answers fields
+          let processedAnswer = q.answer || q.answers || [];
+
+          // For MH, MF, TFNG question types, ensure answer is a string
+          if (q.q_type === "MH" || q.q_type === "MF" || q.q_type === "TFNG") {
+            if (Array.isArray(processedAnswer) && processedAnswer.length > 0) {
+              processedAnswer = processedAnswer[0];
+            }
+          }
+
+          return {
+            ...q,
+            answer: processedAnswer,
+          };
+        });
+      };
+
       const updatedParts = [
         {
           _id: ListeningParts1._id || "",
           image: ListeningParts1.image || "",
           audio: ListeningParts1.audio || "",
           part_num: 1,
-          question: (ListeningParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(ListeningParts1.question),
+          tempQuestions: processQuestions(ListeningParts1.question),
           selectedQuestionType: null,
         },
         {
@@ -317,14 +356,8 @@ export function ModalUpdateListening({
           image: ListeningParts2.image || "",
           audio: ListeningParts2.audio || "",
           part_num: 2,
-          question: (ListeningParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(ListeningParts2.question),
+          tempQuestions: processQuestions(ListeningParts2.question),
           selectedQuestionType: null,
         },
         {
@@ -332,14 +365,8 @@ export function ModalUpdateListening({
           image: ListeningParts3.image || "",
           audio: ListeningParts3.audio || "",
           part_num: 3,
-          question: (ListeningParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(ListeningParts3.question),
+          tempQuestions: processQuestions(ListeningParts3.question),
           selectedQuestionType: null,
         },
         {
@@ -347,14 +374,8 @@ export function ModalUpdateListening({
           image: ListeningParts4.image || "",
           audio: ListeningParts4.audio || "",
           part_num: 4,
-          question: (ListeningParts4.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (ListeningParts4.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(ListeningParts4.question),
+          tempQuestions: processQuestions(ListeningParts4.question),
           selectedQuestionType: null,
         },
       ];

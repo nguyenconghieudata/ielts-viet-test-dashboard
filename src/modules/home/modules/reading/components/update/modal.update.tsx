@@ -27,14 +27,22 @@ import { TestService } from "@/services/test";
 interface Question {
   _id: string;
   part_id: string;
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answer?: string[];
+  answer?: string | string[]; // Can be array for MP and string for others
   start_passage?: string;
   end_passage?: string;
   isMultiple?: boolean;
   image?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface PartDetails {
@@ -44,7 +52,7 @@ interface PartDetails {
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ReadingData {
@@ -199,8 +207,23 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
       question: part.question.map((question) => {
         const transformedQuestion = { ...question };
         if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
+          transformedQuestion.isMultiple =
+            Array.isArray(question.answer) && question.answer.length > 1;
         } else if (question.q_type === "FB") {
+          transformedQuestion.image = "";
+        } else if (question.q_type === "MH") {
+          transformedQuestion.image = "";
+          // Ensure options field is included
+          if (!transformedQuestion.options) {
+            transformedQuestion.options = [];
+          }
+        } else if (question.q_type === "MF") {
+          transformedQuestion.image = "";
+          // Ensure options field is included
+          if (!transformedQuestion.options) {
+            transformedQuestion.options = [];
+          }
+        } else if (question.q_type === "TFNG") {
           transformedQuestion.image = "";
         }
         return transformedQuestion;
@@ -246,14 +269,64 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
         image: partData.image || "",
         content: partData.content || "",
         part_num: index + 1,
-        question: (partData.question || []).map((q: any) => ({
-          ...q,
-          answer: q.answer || q.answers || [],
-        })),
-        tempQuestions: (partData.question || []).map((q: any) => ({
-          ...q,
-          answer: q.answer || q.answers || [],
-        })),
+        question: (partData.question || []).map((q: any) => {
+          // Handle different question types
+          let formattedAnswer;
+          if (q.q_type === "MP") {
+            formattedAnswer = q.answer || q.answers || [];
+          } else if (
+            q.q_type === "MH" ||
+            q.q_type === "MF" ||
+            q.q_type === "TFNG"
+          ) {
+            // For these types, answer should be a string
+            formattedAnswer = Array.isArray(q.answer) ? q.answer[0] : q.answer;
+            if (
+              Array.isArray(q.answers) &&
+              q.answers.length > 0 &&
+              !formattedAnswer
+            ) {
+              formattedAnswer = q.answers[0];
+            }
+          } else {
+            // Default for FB and other types
+            formattedAnswer = q.answer || q.answers || [];
+          }
+
+          return {
+            ...q,
+            answer: formattedAnswer,
+          };
+        }),
+        tempQuestions: (partData.question || []).map((q: any) => {
+          // Handle different question types
+          let formattedAnswer;
+          if (q.q_type === "MP") {
+            formattedAnswer = q.answer || q.answers || [];
+          } else if (
+            q.q_type === "MH" ||
+            q.q_type === "MF" ||
+            q.q_type === "TFNG"
+          ) {
+            // For these types, answer should be a string
+            formattedAnswer = Array.isArray(q.answer) ? q.answer[0] : q.answer;
+            if (
+              Array.isArray(q.answers) &&
+              q.answers.length > 0 &&
+              !formattedAnswer
+            ) {
+              formattedAnswer = q.answers[0];
+            }
+          } else {
+            // Default for FB and other types
+            formattedAnswer = q.answer || q.answers || [];
+          }
+
+          return {
+            ...q,
+            answer: formattedAnswer,
+          };
+        }),
         selectedQuestionType: null,
       }));
 

@@ -99,7 +99,7 @@ export default function FullTest() {
           ) : currenData.length === 0 ? (
             <div className="col-span-2 text-center w-full flex justify-center items-center py-4">
               <p className="text-gray-500 text-lg">
-                Không tìm thấy bài viết nào.
+                Không tìm thấy bài test nào.
               </p>
             </div>
           ) : (
@@ -146,7 +146,10 @@ export default function FullTest() {
                         <td className="w-32 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
                         </td>
-                        <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <td
+                          className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white"
+                          onClick={() => console.log("ITEM", item)}
+                        >
                           <ModalUpdateFullTest fullTestData={item} />
                         </td>
                       </tr>

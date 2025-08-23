@@ -31,7 +31,7 @@ import { QuestionsService } from "@/services/questions";
 import { log } from "console";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
   answers?: string[];
@@ -40,6 +40,16 @@ interface Question {
   isMultiple?: boolean;
   image?: string;
   topic?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // For MH, MF, TFNG - single answer
+  answer?: string | string[];
 }
 
 interface FullTestDetails {
@@ -106,6 +116,8 @@ export function ModalUpdateFullTest({
 
   const init = async () => {
     try {
+      if (!fullTestData) return;
+
       const resR = await ReadingService.getReadingById(fullTestData.r_id);
       const resL = await ListeningService.getListeningById(fullTestData.l_id);
       const resW = await WritingService.getWritingById(fullTestData.w_id);
@@ -142,9 +154,28 @@ export function ModalUpdateFullTest({
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    init();
-  }, []);
+    if (fullTestData) {
+      init();
+    }
+  }, [fullTestData]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (fullTestData) {
+      updateDOM(fullTestData);
+    }
+    if (Object.keys(readings).length > 0) {
+      updateDOMReading(readings);
+    }
+    if (Object.keys(listenings).length > 0) {
+      updateDOMListening(listenings);
+    }
+    if (Object.keys(writings).length > 0) {
+      updateDOMWriting(writings);
+    }
+  }, [fullTestData, readings, listenings, writings]);
 
   const handleReadingUpdate = (body: any) => {
     // console.log("Reading update data:", body);
@@ -335,7 +366,7 @@ export function ModalUpdateFullTest({
 
   const updateDOMReading = async (readingData: ReadingData) => {
     if (!readingData || !readingData.parts) {
-      setListeningUpdateData(null);
+      setReadingUpdateData(null);
       return;
     }
     try {
@@ -349,20 +380,34 @@ export function ModalUpdateFullTest({
         throw new Error("Failed to fetch one or more reading parts.");
       }
 
+      // Helper function to process questions with proper answer handling
+      const processQuestions = (questions: any[]) => {
+        return (questions || []).map((q: any) => {
+          // Handle both answer and answers fields
+          let processedAnswer = q.answer || q.answers || [];
+
+          // For MH, MF, TFNG question types, ensure answer is a string
+          if (q.q_type === "MH" || q.q_type === "MF" || q.q_type === "TFNG") {
+            if (Array.isArray(processedAnswer) && processedAnswer.length > 0) {
+              processedAnswer = processedAnswer[0];
+            }
+          }
+
+          return {
+            ...q,
+            answer: processedAnswer,
+          };
+        });
+      };
+
       const updatedParts = [
         {
           _id: readingParts1._id || "",
           image: readingParts1.image || "",
           content: readingParts1.content || "",
           part_num: 1,
-          question: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(readingParts1.question || []),
+          tempQuestions: processQuestions(readingParts1.question || []),
           selectedQuestionType: null,
         },
         {
@@ -370,14 +415,8 @@ export function ModalUpdateFullTest({
           image: readingParts2.image || "",
           content: readingParts2.content || "",
           part_num: 2,
-          question: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(readingParts2.question || []),
+          tempQuestions: processQuestions(readingParts2.question || []),
           selectedQuestionType: null,
         },
         {
@@ -385,14 +424,8 @@ export function ModalUpdateFullTest({
           image: readingParts3.image || "",
           content: readingParts3.content || "",
           part_num: 3,
-          question: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (readingParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(readingParts3.question || []),
+          tempQuestions: processQuestions(readingParts3.question || []),
           selectedQuestionType: null,
         },
       ];
@@ -408,6 +441,20 @@ export function ModalUpdateFullTest({
           if (question.q_type === "MP") {
             transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
           } else if (question.q_type === "FB") {
+            transformedQuestion.image = "";
+          } else if (question.q_type === "MH") {
+            transformedQuestion.image = "";
+            // Ensure options field is included
+            if (!transformedQuestion.options) {
+              transformedQuestion.options = [];
+            }
+          } else if (question.q_type === "MF") {
+            transformedQuestion.image = "";
+            // Ensure options field is included
+            if (!transformedQuestion.options) {
+              transformedQuestion.options = [];
+            }
+          } else if (question.q_type === "TFNG") {
             transformedQuestion.image = "";
           }
           return transformedQuestion;
@@ -444,7 +491,12 @@ export function ModalUpdateFullTest({
 
     try {
       // Fetch questions for each part concurrently
-      const [listeningParts1, listeningParts2, listeningParts3, listeningParts4] = await Promise.all([
+      const [
+        listeningParts1,
+        listeningParts2,
+        listeningParts3,
+        listeningParts4,
+      ] = await Promise.all([
         QuestionsService.getQuestionsById(listeningData.parts[0]),
         QuestionsService.getQuestionsById(listeningData.parts[1]),
         QuestionsService.getQuestionsById(listeningData.parts[2]),
@@ -452,9 +504,34 @@ export function ModalUpdateFullTest({
       ]);
 
       // Validate fetched data
-      if (!listeningParts1 || !listeningParts2 || !listeningParts3 || !listeningParts4) {
+      if (
+        !listeningParts1 ||
+        !listeningParts2 ||
+        !listeningParts3 ||
+        !listeningParts4
+      ) {
         throw new Error("Failed to fetch one or more listening parts.");
       }
+
+      // Helper function to process questions with proper answer handling
+      const processQuestions = (questions: any[]) => {
+        return (questions || []).map((q: any) => {
+          // Handle both answer and answers fields
+          let processedAnswer = q.answer || q.answers || [];
+
+          // For MH, MF, TFNG question types, ensure answer is a string
+          if (q.q_type === "MH" || q.q_type === "MF" || q.q_type === "TFNG") {
+            if (Array.isArray(processedAnswer) && processedAnswer.length > 0) {
+              processedAnswer = processedAnswer[0];
+            }
+          }
+
+          return {
+            ...q,
+            answer: processedAnswer,
+          };
+        });
+      };
 
       // Transform parts data
       const updatedParts = [
@@ -463,14 +540,8 @@ export function ModalUpdateFullTest({
           image: listeningParts1.image || "",
           audio: listeningParts1.audio || "",
           part_num: 1,
-          question: (listeningParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (listeningParts1.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(listeningParts1.question || []),
+          tempQuestions: processQuestions(listeningParts1.question || []),
           selectedQuestionType: null,
         },
         {
@@ -478,14 +549,8 @@ export function ModalUpdateFullTest({
           image: listeningParts2.image || "",
           audio: listeningParts2.audio || "",
           part_num: 2,
-          question: (listeningParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (listeningParts2.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(listeningParts2.question || []),
+          tempQuestions: processQuestions(listeningParts2.question || []),
           selectedQuestionType: null,
         },
         {
@@ -493,14 +558,8 @@ export function ModalUpdateFullTest({
           image: listeningParts3.image || "",
           audio: listeningParts3.audio || "",
           part_num: 3,
-          question: (listeningParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (listeningParts3.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(listeningParts3.question || []),
+          tempQuestions: processQuestions(listeningParts3.question || []),
           selectedQuestionType: null,
         },
         {
@@ -508,14 +567,8 @@ export function ModalUpdateFullTest({
           image: listeningParts4.image || "",
           audio: listeningParts4.audio || "",
           part_num: 4,
-          question: (listeningParts4.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
-          tempQuestions: (listeningParts4.question || []).map((q: any) => ({
-            ...q,
-            answer: q.answer || q.answers || [],
-          })),
+          question: processQuestions(listeningParts4.question || []),
+          tempQuestions: processQuestions(listeningParts4.question || []),
           selectedQuestionType: null,
         },
       ];
@@ -531,6 +584,20 @@ export function ModalUpdateFullTest({
           if (question.q_type === "MP") {
             transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
           } else if (question.q_type === "FB") {
+            transformedQuestion.image = "";
+          } else if (question.q_type === "MH") {
+            transformedQuestion.image = "";
+            // Ensure options field is included
+            if (!transformedQuestion.options) {
+              transformedQuestion.options = [];
+            }
+          } else if (question.q_type === "MF") {
+            transformedQuestion.image = "";
+            // Ensure options field is included
+            if (!transformedQuestion.options) {
+              transformedQuestion.options = [];
+            }
+          } else if (question.q_type === "TFNG") {
             transformedQuestion.image = "";
           }
           return transformedQuestion;
@@ -561,7 +628,7 @@ export function ModalUpdateFullTest({
 
   const updateDOMWriting = async (writingData: WritingData) => {
     if (!writingData || !writingData.parts) {
-      setListeningUpdateData(null);
+      setWritingUpdateData(null);
       return;
     }
 
@@ -634,8 +701,6 @@ export function ModalUpdateFullTest({
       // Update state with transformed data
       setWritingUpdateData(body);
       setIsLoadingDOM(false);
-      console.log("Writing update data:", body);
-
     } catch (error) {
       console.error("Failed to fetch writing parts:", error);
       toast({
@@ -645,14 +710,6 @@ export function ModalUpdateFullTest({
       });
     }
   };
-
-  useEffect(() => {
-    updateDOM(fullTestData);
-    updateDOMReading(readings);
-    updateDOMListening(listenings);
-    updateDOMWriting(writings);
-  }, [fullTestData, readings, listenings, writings]);
-
 
   return (
     <Dialog>
@@ -769,15 +826,24 @@ export function ModalUpdateFullTest({
               </div>
               <div className="mt-2 flex flex-row items-start gap-2">
                 <ModalUpdateReading
-                  data={readings}
+                  data={{
+                    _id: fullTestData.r_id,
+                    ...readings,
+                  }}
                   onUpdate={handleReadingUpdate}
                 />
                 <ModalUpdateListening
-                  data={listenings}
+                  data={{
+                    _id: fullTestData.l_id,
+                    ...listenings,
+                  }}
                   onUpdate={handleListeningUpdate}
                 />
                 <ModalUpdateWriting
-                  data={writings}
+                  data={{
+                    _id: fullTestData.w_id,
+                    ...writings,
+                  }}
                   onUpdate={handleWritingUpdate}
                 />
               </div>
@@ -818,6 +884,6 @@ export function ModalUpdateFullTest({
           </div>
         </DialogFooter>
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 }

@@ -1,43 +1,42 @@
 import { Label } from "@/components/ui/label";
-import { on } from "events";
 
 interface Question {
-  q_type: "MP" | "FB";
+  _id: string;
+  part_id: string;
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answers?: string[];
-  answer?: string[];
+  answer?: string | string[];
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface QuestionListProps {
+  title?: string;
   questions: Question[];
-  onEdit: (index: number) => void;
-  onDelete: (index: number) => void;
+  onEdit?: (index: number) => void;
+  onDelete?: (index: number) => void;
 }
 
 export function QuestionList({
+  title,
   questions,
   onEdit,
   onDelete,
 }: QuestionListProps) {
-  const getQuestionTypeLabel = (q_type: Question["q_type"]) => {
-    switch (q_type) {
-      case "MP":
-        return "Trắc nghiệm";
-      case "FB":
-        return "Điền vào chỗ trống";
-      default:
-        return "Không xác định";
-    }
-  };
-
   return (
     <>
       {questions.length > 0 && (
-        <div className="col-span-3 w-full mt-4">
-          <Label className="text-lg font-semibold">Danh sách câu hỏi</Label>
+        <div className="w-full mt-4">
+          <Label className="text-lg font-semibold">{title}</Label>
           <div className="mt-2 space-y-4">
             {questions.map((question, index) => (
               <div
@@ -46,19 +45,37 @@ export function QuestionList({
               >
                 <div className="flex justify-between items-center">
                   <h3 className="text-md font-medium text-indigo-600">
-                    Câu hỏi {index + 1}: {getQuestionTypeLabel(question.q_type)}
+                    Câu hỏi {index + 1}:{" "}
+                    {question.q_type === "MP"
+                      ? "Trắc nghiệm"
+                      : question.q_type === "FB"
+                      ? "Điền vào chỗ trống"
+                      : question.q_type === "MH"
+                      ? "Matching Headings"
+                      : question.q_type === "MF"
+                      ? "Matching Features"
+                      : "True/False/Not Given"}
                   </h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        onEdit(index);
-                        console.log("Edit question at index:", index);
-                      }}
-                      className="text-indigo-600 hover:text-indigo-800 font-medium"
-                    >
-                      Sửa
-                    </button>
-                  </div>
+                  {(onEdit || onDelete) && (
+                    <div className="flex gap-2">
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(index)}
+                          className="text-indigo-600 hover:text-indigo-800 font-medium"
+                        >
+                          Sửa
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(index)}
+                          className="text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Xóa
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 space-y-2">
                   {question.q_type === "MP" ? (
@@ -74,11 +91,12 @@ export function QuestionList({
                             {question.choices.map((choice, i) => (
                               <li key={i}>
                                 {choice || "Chưa nhập"}{" "}
-                                {question.answer?.includes(choice) && (
-                                  <span className="text-green-600">
-                                    (Đáp án đúng)
-                                  </span>
-                                )}
+                                {Array.isArray(question.answer) &&
+                                  question.answer?.includes(choice) && (
+                                    <span className="text-green-600">
+                                      (Đáp án đúng)
+                                    </span>
+                                  )}
                               </li>
                             ))}
                           </ul>
@@ -87,7 +105,7 @@ export function QuestionList({
                         )}
                       </p>
                     </>
-                  ) : (
+                  ) : question.q_type === "FB" ? (
                     <>
                       <p>
                         <strong>Đoạn đầu:</strong>{" "}
@@ -99,9 +117,87 @@ export function QuestionList({
                       </p>
                       <p>
                         <strong>Đáp án:</strong>{" "}
-                        {question.answer?.length
+                        {Array.isArray(question.answer) &&
+                        question.answer.length
                           ? question.answer.join(", ")
                           : "Chưa có đáp án"}
+                      </p>
+                    </>
+                  ) : question.q_type === "MH" ? (
+                    <>
+                      <p>
+                        <strong>Heading:</strong>{" "}
+                        {question.heading || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Paragraph ID:</strong>{" "}
+                        {question.paragraph_id || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Options:</strong>{" "}
+                        {question.options?.length ? (
+                          <ul className="list-disc pl-5">
+                            {question.options.map((option, i) => (
+                              <li key={i}>
+                                {option || "Chưa nhập"}{" "}
+                                {question.answer === option && (
+                                  <span className="text-green-600">
+                                    (Đáp án đúng)
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "Chưa có options"
+                        )}
+                      </p>
+                    </>
+                  ) : question.q_type === "MF" ? (
+                    <>
+                      <p>
+                        <strong>Feature:</strong>{" "}
+                        {question.feature || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Options:</strong>{" "}
+                        {question.options?.length ? (
+                          <ul className="list-disc pl-5">
+                            {question.options.map((option, i) => (
+                              <li key={i}>
+                                {option || "Chưa nhập"}{" "}
+                                {question.answer === option && (
+                                  <span className="text-green-600">
+                                    (Đáp án đúng)
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "Chưa có options"
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>Sentence:</strong>{" "}
+                        {question.sentence || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span
+                          className={`font-medium ${
+                            question.answer === "TRUE"
+                              ? "text-green-600"
+                              : question.answer === "FALSE"
+                              ? "text-red-600"
+                              : "text-blue-600"
+                          }`}
+                        >
+                          {question.answer || "Chưa chọn"}
+                        </span>
                       </p>
                     </>
                   )}

@@ -29,12 +29,22 @@ import {
 } from "@/components/ui/select";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
   answers?: string[];
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // For MH, MF, TFNG - single answer
+  answer?: string;
 }
 
 interface PartDetails {
@@ -43,7 +53,7 @@ interface PartDetails {
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ModalCreateReadingDetailProps {
@@ -287,6 +297,88 @@ export function ModalCreateReadingDetail({
         });
         return false;
       }
+    } else if (selectedQuestionType === "MH") {
+      if (!currentQuestion.heading?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập heading.",
+        });
+        return false;
+      }
+      if (!currentQuestion.paragraph_id?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập paragraph ID.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        !currentQuestion.answer.trim() ||
+        !currentQuestion.options?.includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "MF") {
+      if (!currentQuestion.feature?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập feature.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        !currentQuestion.answer.trim() ||
+        !currentQuestion.options?.includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "TFNG") {
+      if (!currentQuestion.sentence?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập câu phát biểu.",
+        });
+        return false;
+      }
+      if (!currentQuestion.answer || !currentQuestion.answer.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách TRUE/FALSE/NOT GIVEN.",
+        });
+        return false;
+      }
     }
     return true;
   };
@@ -340,14 +432,14 @@ export function ModalCreateReadingDetail({
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
-          ...part,
-          tempQuestions:
-            editingQuestionIndex !== null
-              ? part.tempQuestions.map((q, i) =>
-                i === editingQuestionIndex ? newQuestion : q
-              )
-              : [...part.tempQuestions, newQuestion],
-        }
+            ...part,
+            tempQuestions:
+              editingQuestionIndex !== null
+                ? part.tempQuestions.map((q, i) =>
+                    i === editingQuestionIndex ? newQuestion : q
+                  )
+                : [...part.tempQuestions, newQuestion],
+          }
         : part
     );
     onPartsUpdate(updatedParts);
@@ -358,6 +450,14 @@ export function ModalCreateReadingDetail({
       answers: [],
       start_passage: "",
       end_passage: "",
+      heading: "",
+      options:
+        selectedQuestionType === "MH" || selectedQuestionType === "MF"
+          ? [""]
+          : undefined,
+      paragraph_id: "",
+      feature: "",
+      sentence: "",
     });
     setEditingQuestionIndex(null);
     toast({
@@ -391,9 +491,9 @@ export function ModalCreateReadingDetail({
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
-          ...part,
-          tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
-        }
+            ...part,
+            tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
+          }
         : part
     );
     onPartsUpdate(updatedParts);
@@ -418,14 +518,36 @@ export function ModalCreateReadingDetail({
               choices: question.choices || [],
               answers: question.answers || [],
             };
-          } else {
+          } else if (question.q_type === "FB") {
             return {
               q_type: "FB",
               start_passage: question.start_passage || "",
               end_passage: question.end_passage || "",
               answers: question.answers || [],
             };
+          } else if (question.q_type === "MH") {
+            return {
+              q_type: "MH",
+              heading: question.heading || "",
+              paragraph_id: question.paragraph_id || "",
+              options: question.options || [],
+              answer: question.answer || "",
+            };
+          } else if (question.q_type === "MF") {
+            return {
+              q_type: "MF",
+              feature: question.feature || "",
+              options: question.options || [],
+              answer: question.answer || "",
+            };
+          } else if (question.q_type === "TFNG") {
+            return {
+              q_type: "TFNG",
+              sentence: question.sentence || "",
+              answer: question.answer || "",
+            };
           }
+          return question; // Fallback for other types or if q_type is missing
         }
       );
 
@@ -506,10 +628,11 @@ export function ModalCreateReadingDetail({
               parts.map((part) => (
                 <button
                   key={part.part_num}
-                  className={`border rounded-md px-5 h-10 ${activePart === part.part_num
+                  className={`border rounded-md px-5 h-10 ${
+                    activePart === part.part_num
                       ? "border-indigo-600 bg-indigo-600 text-white"
                       : "border-gray-200"
-                    }`}
+                  }`}
                   onClick={() => setActivePart(part.part_num)}
                 >
                   Passage {part.part_num}
@@ -553,6 +676,12 @@ export function ModalCreateReadingDetail({
                         question: "",
                         start_passage: "",
                         end_passage: "",
+                        heading: "",
+                        options:
+                          type === "MH" || type === "MF" ? [""] : undefined,
+                        paragraph_id: "",
+                        feature: "",
+                        sentence: "",
                       });
                       setEditingQuestionIndex(null);
                     }}
@@ -560,129 +689,413 @@ export function ModalCreateReadingDetail({
                 </div>
                 {parts.find((part) => part.part_num === activePart)
                   ?.selectedQuestionType && (
-                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
-                      {parts.find((part) => part.part_num === activePart)
-                        ?.selectedQuestionType === "MP" && (
-                          <div className="flex flex-col gap-4">
-                            <div className="font-bold text-lg">MULTIPLE CHOICE</div>
-                            <Label className="text-[14.5px]">
-                              Câu hỏi trắc nghiệm
-                            </Label>
+                  <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
+                    {parts.find((part) => part.part_num === activePart)
+                      ?.selectedQuestionType === "MP" && (
+                      <div className="flex flex-col gap-4">
+                        <div className="font-bold text-lg">MULTIPLE CHOICE</div>
+                        <Label className="text-[14.5px]">
+                          Câu hỏi trắc nghiệm
+                        </Label>
+                        <input
+                          value={currentQuestion.question || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              question: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập câu hỏi"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Lựa chọn</Label>
+                        {currentQuestion.choices?.map((choice, index) => (
+                          <div key={index} className="flex items-center gap-4">
                             <input
-                              value={currentQuestion.question || ""}
+                              value={choice}
                               onChange={(e) =>
-                                setCurrentQuestion({
-                                  ...currentQuestion,
-                                  question: e.target.value,
-                                })
+                                handleChoiceChange(index, e.target.value)
                               }
-                              placeholder="Nhập câu hỏi"
-                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                              placeholder={`Lựa chọn ${index + 1}`}
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
                             />
-                            <Label className="text-[14.5px]">Lựa chọn</Label>
-                            {currentQuestion.choices?.map((choice, index) => (
-                              <div key={index} className="flex items-center gap-4">
-                                <input
-                                  value={choice}
-                                  onChange={(e) =>
-                                    handleChoiceChange(index, e.target.value)
-                                  }
-                                  placeholder={`Lựa chọn ${index + 1}`}
-                                  className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
-                                />
-                                <input
-                                  type="checkbox"
-                                  checked={currentQuestion.answers?.includes(
-                                    choice
-                                  )}
-                                  onChange={() => handleAnswerToggle(choice)}
-                                  disabled={!choice}
-                                />
-                                <button
-                                  onClick={() => handleRemoveChoice(index)}
-                                  className="bg-red-500 text-white p-2 rounded-full"
-                                  disabled={currentQuestion.choices?.length === 1}
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ))}
+                            <input
+                              type="checkbox"
+                              checked={currentQuestion.answers?.includes(
+                                choice
+                              )}
+                              onChange={() => handleAnswerToggle(choice)}
+                              disabled={!choice}
+                            />
                             <button
-                              onClick={handleAddChoice}
-                              className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                              onClick={() => handleRemoveChoice(index)}
+                              className="bg-red-500 text-white p-2 rounded-full"
+                              disabled={currentQuestion.choices?.length === 1}
                             >
-                              <Plus />
+                              <X size={16} />
                             </button>
                           </div>
-                        )}
-                      {parts.find((part) => part.part_num === activePart)
-                        ?.selectedQuestionType === "FB" && (
-                          <div className="flex flex-col gap-4">
-                            <div className="font-bold text-lg">
-                              FILL IN THE BLANK
-                            </div>
-                            <Label className="text-[14.5px]">Đoạn đầu</Label>
-                            <input
-                              value={currentQuestion.start_passage || ""}
-                              onChange={(e) =>
-                                setCurrentQuestion({
-                                  ...currentQuestion,
-                                  start_passage: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập đoạn đầu"
-                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                            />
-                            <Label className="text-[14.5px]">Đoạn cuối</Label>
-                            <input
-                              value={currentQuestion.end_passage || ""}
-                              onChange={(e) =>
-                                setCurrentQuestion({
-                                  ...currentQuestion,
-                                  end_passage: e.target.value,
-                                })
-                              }
-                              placeholder="Nhập đoạn cuối"
-                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                            />
-                            <Label className="text-[14.5px]">Đáp án</Label>
-                            <input
-                              value={currentQuestion.answers?.[0] || ""}
-                              onChange={(e) =>
-                                setCurrentQuestion({
-                                  ...currentQuestion,
-                                  answers: [e.target.value],
-                                })
-                              }
-                              placeholder="Nhập đáp án"
-                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                            />
-                          </div>
-                        )}
-                      <button
-                        onClick={handleAddQuestion}
-                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
-                      >
-                        {editingQuestionIndex !== null ? (
-                          <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
-                        ) : (
-                          <>
-                            <Plus /> Thêm câu hỏi
-                          </>
-                        )}
-                      </button>
-                      <div className="mt-4">
-                        <QuestionList
-                          questions={
-                            parts.find((part) => part.part_num === activePart)
-                              ?.tempQuestions || []
+                        ))}
+                        <button
+                          onClick={handleAddChoice}
+                          className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                        >
+                          <Plus />
+                        </button>
+                      </div>
+                    )}
+                    {parts.find((part) => part.part_num === activePart)
+                      ?.selectedQuestionType === "FB" && (
+                      <div className="flex flex-col gap-4">
+                        <div className="font-bold text-lg">
+                          FILL IN THE BLANK
+                        </div>
+                        <Label className="text-[14.5px]">Đoạn đầu</Label>
+                        <input
+                          value={currentQuestion.start_passage || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              start_passage: e.target.value,
+                            })
                           }
-                          onEdit={handleEditQuestion}
-                          onDelete={handleDeleteQuestion}
+                          placeholder="Nhập đoạn đầu"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Đoạn cuối</Label>
+                        <input
+                          value={currentQuestion.end_passage || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              end_passage: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập đoạn cuối"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Đáp án</Label>
+                        <input
+                          value={currentQuestion.answers?.[0] || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              answers: [e.target.value],
+                            })
+                          }
+                          placeholder="Nhập đáp án"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                         />
                       </div>
+                    )}
+                    {parts.find((part) => part.part_num === activePart)
+                      ?.selectedQuestionType === "MH" && (
+                      <div className="flex flex-col gap-4">
+                        <div className="font-bold text-lg">
+                          MATCHING HEADINGS
+                        </div>
+                        <Label className="text-[14.5px]">Heading</Label>
+                        <input
+                          value={currentQuestion.heading || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              heading: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập heading"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Paragraph ID</Label>
+                        <input
+                          value={currentQuestion.paragraph_id || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              paragraph_id: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập paragraph ID"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Options</Label>
+                        {(currentQuestion.options || [""]).map(
+                          (option, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-4"
+                            >
+                              <input
+                                value={option}
+                                onChange={(e) => {
+                                  const updatedOptions = [
+                                    ...(currentQuestion.options || [""]),
+                                  ];
+                                  updatedOptions[index] = e.target.value;
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    options: updatedOptions,
+                                  });
+                                }}
+                                placeholder={`Option ${index + 1}`}
+                                className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                              />
+                              <input
+                                type="radio"
+                                checked={currentQuestion.answer === option}
+                                onChange={() => {
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    answer: option,
+                                  });
+                                }}
+                                disabled={!option.trim()}
+                              />
+                              <button
+                                onClick={() => {
+                                  const updatedOptions = (
+                                    currentQuestion.options || []
+                                  ).filter((_, i) => i !== index);
+                                  // If the deleted option was the answer, clear the answer
+                                  const updatedAnswer =
+                                    currentQuestion.answer === option
+                                      ? ""
+                                      : currentQuestion.answer || "";
+
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    options: updatedOptions.length
+                                      ? updatedOptions
+                                      : [""],
+                                    answer: updatedAnswer,
+                                  });
+                                }}
+                                className="bg-red-500 text-white p-2 rounded-full"
+                                disabled={
+                                  (currentQuestion.options || []).length <= 1
+                                }
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )
+                        )}
+                        <button
+                          onClick={() => {
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              options: [
+                                ...(currentQuestion.options || [""]),
+                                "",
+                              ],
+                            });
+                          }}
+                          className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                        >
+                          <Plus />
+                        </button>
+                      </div>
+                    )}
+                    {parts.find((part) => part.part_num === activePart)
+                      ?.selectedQuestionType === "MF" && (
+                      <div className="flex flex-col gap-4">
+                        <div className="font-bold text-lg">
+                          MATCHING FEATURES
+                        </div>
+                        <Label className="text-[14.5px]">Feature</Label>
+                        <input
+                          value={currentQuestion.feature || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              feature: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập feature"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Options</Label>
+                        {(currentQuestion.options || [""]).map(
+                          (option, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center gap-4"
+                            >
+                              <input
+                                value={option}
+                                onChange={(e) => {
+                                  const updatedOptions = [
+                                    ...(currentQuestion.options || [""]),
+                                  ];
+                                  updatedOptions[index] = e.target.value;
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    options: updatedOptions,
+                                  });
+                                }}
+                                placeholder={`Option ${index + 1}`}
+                                className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                              />
+                              <input
+                                type="radio"
+                                checked={currentQuestion.answer === option}
+                                onChange={() => {
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    answer: option,
+                                  });
+                                }}
+                                disabled={!option.trim()}
+                              />
+                              <button
+                                onClick={() => {
+                                  const updatedOptions = (
+                                    currentQuestion.options || []
+                                  ).filter((_, i) => i !== index);
+                                  // If the deleted option was the answer, clear the answer
+                                  const updatedAnswer =
+                                    currentQuestion.answer === option
+                                      ? ""
+                                      : currentQuestion.answer || "";
+
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    options: updatedOptions.length
+                                      ? updatedOptions
+                                      : [""],
+                                    answer: updatedAnswer,
+                                  });
+                                }}
+                                className="bg-red-500 text-white p-2 rounded-full"
+                                disabled={
+                                  (currentQuestion.options || []).length <= 1
+                                }
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )
+                        )}
+                        <button
+                          onClick={() => {
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              options: [
+                                ...(currentQuestion.options || [""]),
+                                "",
+                              ],
+                            });
+                          }}
+                          className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                        >
+                          <Plus />
+                        </button>
+                      </div>
+                    )}
+                    {parts.find((part) => part.part_num === activePart)
+                      ?.selectedQuestionType === "TFNG" && (
+                      <div className="flex flex-col gap-4">
+                        <div className="font-bold text-lg">
+                          TRUE / FALSE / NOT GIVEN
+                        </div>
+                        <Label className="text-[14.5px]">Sentence</Label>
+                        <input
+                          value={currentQuestion.sentence || ""}
+                          onChange={(e) =>
+                            setCurrentQuestion({
+                              ...currentQuestion,
+                              sentence: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập câu phát biểu"
+                          className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                        />
+                        <Label className="text-[14.5px]">Answer</Label>
+                        <div className="flex flex-col gap-2 mt-1">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="true-option"
+                              checked={currentQuestion.answer === "TRUE"}
+                              onChange={() => {
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  answer: "TRUE",
+                                });
+                              }}
+                            />
+                            <label
+                              htmlFor="true-option"
+                              className="cursor-pointer"
+                            >
+                              TRUE
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="false-option"
+                              checked={currentQuestion.answer === "FALSE"}
+                              onChange={() => {
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  answer: "FALSE",
+                                });
+                              }}
+                            />
+                            <label
+                              htmlFor="false-option"
+                              className="cursor-pointer"
+                            >
+                              FALSE
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              id="not-given-option"
+                              checked={currentQuestion.answer === "NOT GIVEN"}
+                              onChange={() => {
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  answer: "NOT GIVEN",
+                                });
+                              }}
+                            />
+                            <label
+                              htmlFor="not-given-option"
+                              className="cursor-pointer"
+                            >
+                              NOT GIVEN
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleAddQuestion}
+                      className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
+                    >
+                      {editingQuestionIndex !== null ? (
+                        <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
+                      ) : (
+                        <>
+                          <Plus /> Thêm câu hỏi
+                        </>
+                      )}
+                    </button>
+                    <div className="mt-4">
+                      <QuestionList
+                        questions={
+                          parts.find((part) => part.part_num === activePart)
+                            ?.tempQuestions || []
+                        }
+                        onEdit={handleEditQuestion}
+                        onDelete={handleDeleteQuestion}
+                      />
                     </div>
-                  )}
+                  </div>
+                )}
                 <QuestionList
                   questions={
                     parts.find((part) => part.part_num === activePart)

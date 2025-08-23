@@ -27,14 +27,20 @@ import { TestService } from "@/services/test";
 interface Question {
   _id: string;
   part_id: string;
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answer?: string[];
+  answer?: string | string[];
   start_passage?: string;
   end_passage?: string;
-  isMultiple?: boolean;
-  describe_image?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface PartDetails {
@@ -44,7 +50,7 @@ interface PartDetails {
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ListeningData {
@@ -191,20 +197,54 @@ export function ModalUpdateListening({ data }: { data: ListeningData }) {
       mainPreview,
     ]);
 
+    const transformedQuestions = parts.flatMap((part) => {
+      return part.question.map((question) => {
+        const transformedQuestion: any = {
+          _id: question._id,
+          part_id: part._id,
+          part_num: part.part_num,
+          q_type: question.q_type,
+          image: part.image,
+          audio: part.audio,
+        };
+
+        if (question.q_type === "MP") {
+          transformedQuestion.isMultiple =
+            Array.isArray(question.answer) && question.answer.length > 1;
+          transformedQuestion.question = question.question;
+          transformedQuestion.choices = question.choices;
+          transformedQuestion.answer = question.answer;
+        } else if (question.q_type === "FB") {
+          transformedQuestion.start_passage = question.start_passage;
+          transformedQuestion.end_passage = question.end_passage;
+          transformedQuestion.answer = question.answer;
+        } else if (question.q_type === "MH") {
+          transformedQuestion.image = "";
+          transformedQuestion.heading = question.heading;
+          transformedQuestion.paragraph_id = question.paragraph_id;
+          transformedQuestion.options = question.options || [];
+          transformedQuestion.answer = question.answer;
+        } else if (question.q_type === "MF") {
+          transformedQuestion.image = "";
+          transformedQuestion.feature = question.feature;
+          transformedQuestion.options = question.options || [];
+          transformedQuestion.answer = question.answer;
+        } else if (question.q_type === "TFNG") {
+          transformedQuestion.image = "";
+          transformedQuestion.sentence = question.sentence;
+          transformedQuestion.answer = question.answer;
+        }
+
+        return transformedQuestion;
+      });
+    });
+
     const transformedParts = parts.map((part) => ({
       _id: part._id,
       image: part.image,
       audio: part.audio,
       part_num: part.part_num,
-      question: part.question.map((question) => {
-        const transformedQuestion = { ...question };
-        if (question.q_type === "MP") {
-          transformedQuestion.isMultiple = (question.answer?.length || 0) > 1;
-        } else if (question.q_type === "FB") {
-          transformedQuestion.describe_image = "";
-        }
-        return transformedQuestion;
-      }),
+      question: transformedQuestions.filter((q) => q.part_id === part._id),
     }));
 
     const body = {

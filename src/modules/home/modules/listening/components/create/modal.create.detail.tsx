@@ -30,12 +30,25 @@ import {
 } from "@/components/ui/select";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
+  part_num?: number;
+  image?: string;
+  audio?: string;
   question?: string;
   choices?: string[];
   answers?: string[];
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // For MH, MF, TFNG - single answer
+  answer?: string;
 }
 
 interface PartDetails {
@@ -44,7 +57,7 @@ interface PartDetails {
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ModalCreateListeningDetailProps {
@@ -323,6 +336,92 @@ export function ModalCreateListeningDetail({
         });
         return false;
       }
+    } else if (selectedQuestionType === "MH") {
+      if (!currentQuestion.heading?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập heading.",
+        });
+        return false;
+      }
+      if (!currentQuestion.paragraph_id?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập paragraph ID.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        !currentQuestion.answer.trim() ||
+        !currentQuestion.options?.includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "MF") {
+      if (!currentQuestion.feature?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập feature.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        !currentQuestion.answer.trim() ||
+        !currentQuestion.options?.includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "TFNG") {
+      if (!currentQuestion.sentence?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập câu phát biểu.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        !currentQuestion.answer.trim() ||
+        !["TRUE", "FALSE", "NOT GIVEN"].includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách TRUE/FALSE/NOT GIVEN.",
+        });
+        return false;
+      }
     }
     return true;
   };
@@ -368,43 +467,102 @@ export function ModalCreateListeningDetail({
   };
 
   const handleAddQuestion = () => {
+    if (!validateCurrentQuestion()) return;
+
     const selectedQuestionType = parts.find(
       (part) => part.part_num === activePart
     )?.selectedQuestionType;
-    if (!validateCurrentQuestion()) return;
-    const newQuestion = { ...currentQuestion, q_type: selectedQuestionType! };
+
+    if (!selectedQuestionType) {
+      toast({ variant: "destructive", title: "Loại câu hỏi không hợp lệ." });
+      return;
+    }
+
+    let newQuestion: Question = {
+      q_type: selectedQuestionType,
+    };
+
+    if (selectedQuestionType === "MP") {
+      newQuestion = {
+        ...newQuestion,
+        question: currentQuestion.question || "",
+        choices: currentQuestion.choices || [],
+        answers: currentQuestion.answers || [],
+      };
+    } else if (selectedQuestionType === "FB") {
+      newQuestion = {
+        ...newQuestion,
+        start_passage: currentQuestion.start_passage || "",
+        end_passage: currentQuestion.end_passage || "",
+        answers: currentQuestion.answers || [],
+      };
+    } else if (selectedQuestionType === "MH") {
+      newQuestion = {
+        ...newQuestion,
+        heading: currentQuestion.heading || "",
+        paragraph_id: currentQuestion.paragraph_id || "",
+        options: currentQuestion.options || [],
+        answer: currentQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "MF") {
+      newQuestion = {
+        ...newQuestion,
+        feature: currentQuestion.feature || "",
+        options: currentQuestion.options || [],
+        answer: currentQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "TFNG") {
+      newQuestion = {
+        ...newQuestion,
+        sentence: currentQuestion.sentence || "",
+        answer: currentQuestion.answer || "",
+      };
+    }
+
+    // Add the required fields to the question
+    const currentPart = parts.find((part) => part.part_num === activePart);
+    const questionWithFields = {
+      ...newQuestion,
+      part_num: activePart,
+      image: currentPart?.image || "",
+      audio: currentPart?.audio || "",
+    };
+
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
             ...part,
-            tempQuestions:
-              editingQuestionIndex !== null
-                ? part.tempQuestions.map((q, i) =>
-                    i === editingQuestionIndex ? newQuestion : q
-                  )
-                : [...part.tempQuestions, newQuestion],
+            questions: [...part.questions, questionWithFields],
+            tempQuestions: [...part.tempQuestions, questionWithFields],
+            // Keep the question form visible by not resetting selectedQuestionType
           }
         : part
     );
+
     onPartsUpdate(updatedParts);
+
+    // Reset current question state but maintain the same question type
     setCurrentQuestion({
-      q_type: selectedQuestionType!,
+      q_type: selectedQuestionType,
       question: "",
       choices: selectedQuestionType === "MP" ? [""] : undefined,
       answers: [],
       start_passage: "",
       end_passage: "",
+      heading: "",
+      options:
+        selectedQuestionType === "MH" || selectedQuestionType === "MF"
+          ? [""]
+          : undefined,
+      paragraph_id: "",
+      feature: "",
+      sentence: "",
+      answer: "",
     });
-    setEditingQuestionIndex(null);
+
     toast({
-      title:
-        editingQuestionIndex !== null
-          ? "Câu hỏi đã được cập nhật"
-          : "Câu hỏi đã được thêm",
-      description:
-        editingQuestionIndex !== null
-          ? "Câu hỏi đã được sửa thành công."
-          : "Câu hỏi mới đã được thêm vào danh sách.",
+      title: "Câu hỏi đã được thêm",
+      description: "Câu hỏi mới đã được thêm vào danh sách.",
     });
   };
 
@@ -412,6 +570,7 @@ export function ModalCreateListeningDetail({
     const questionToEdit = parts.find((part) => part.part_num === activePart)
       ?.tempQuestions[index];
     if (questionToEdit) {
+      // Preserve all fields including part_num, image, and audio
       setCurrentQuestion({ ...questionToEdit });
       setEditingQuestionIndex(index);
       const updatedParts = parts.map((part) =>
@@ -440,19 +599,6 @@ export function ModalCreateListeningDetail({
   };
 
   const handleSaveQuestions = () => {
-    // Validate that all parts have audio
-    const partsWithoutAudio = parts.filter((part) => !part.audio);
-    if (partsWithoutAudio.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Missing audio",
-        description: `Please upload audio files for Passage ${partsWithoutAudio
-          .map((p) => p.part_num)
-          .join(", ")}`,
-      });
-      return;
-    }
-
     const updatedParts = parts.map((part) => {
       if (part.tempQuestions.length === 0) {
         return part;
@@ -460,37 +606,72 @@ export function ModalCreateListeningDetail({
 
       const formattedQuestions: Question[] = part.tempQuestions.map(
         (question) => {
+          let formattedQuestion: Question;
+
           if (question.q_type === "MP") {
-            return {
+            formattedQuestion = {
               q_type: "MP",
               question: question.question || "",
               choices: question.choices || [],
               answers: question.answers || [],
             };
-          } else {
-            return {
+          } else if (question.q_type === "FB") {
+            formattedQuestion = {
               q_type: "FB",
               start_passage: question.start_passage || "",
               end_passage: question.end_passage || "",
               answers: question.answers || [],
             };
+          } else if (question.q_type === "MH") {
+            formattedQuestion = {
+              q_type: "MH",
+              heading: question.heading || "",
+              paragraph_id: question.paragraph_id || "",
+              options: question.options || [],
+              answer: question.answer || "",
+            };
+          } else if (question.q_type === "MF") {
+            formattedQuestion = {
+              q_type: "MF",
+              feature: question.feature || "",
+              options: question.options || [],
+              answer: question.answer || "",
+            };
+          } else if (question.q_type === "TFNG") {
+            formattedQuestion = {
+              q_type: "TFNG",
+              sentence: question.sentence || "",
+              answer: question.answer || "",
+            };
+          } else {
+            formattedQuestion = question;
           }
+
+          // Add the required fields to each question
+          return {
+            ...formattedQuestion,
+            part_num: part.part_num,
+            image: part.image || "",
+            audio: part.audio || "",
+          };
         }
       );
 
       return {
         ...part,
-        questions: [...part.questions, ...formattedQuestions],
+        questions: formattedQuestions, // Replace old question list with new tempQuestions
         tempQuestions: [],
-        selectedQuestionType: null,
+        // Keep the selected question type to keep the form visible
       };
     });
 
     onPartsUpdate(updatedParts);
 
+    console.log("Updated parts:", updatedParts);
+
     toast({
       title: "Đã lưu câu hỏi",
-      description: "Tất cả câu hỏi và audio đã được lưu thành công.",
+      description: "Tất cả câu hỏi đã được lưu thành công.",
     });
 
     if (dialogCloseRef.current) {
@@ -656,9 +837,12 @@ export function ModalCreateListeningDetail({
                       }}
                     />
                   </div>
+
+                  {/* Question Form Section */}
                   {parts.find((part) => part.part_num === activePart)
                     ?.selectedQuestionType && (
-                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
+                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4 border-b pb-6 mb-6">
+                      <h3 className="text-lg font-bold">Thêm câu hỏi mới</h3>
                       {parts.find((part) => part.part_num === activePart)
                         ?.selectedQuestionType === "MP" && (
                         <div className="flex flex-col gap-4">
@@ -762,6 +946,290 @@ export function ModalCreateListeningDetail({
                           />
                         </div>
                       )}
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "MH" && (
+                        <div className="flex flex-col gap-4">
+                          <div className="font-bold text-lg">
+                            MATCHING HEADINGS
+                          </div>
+                          <Label className="text-[14.5px]">Heading</Label>
+                          <input
+                            value={currentQuestion.heading || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                heading: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập heading"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Paragraph ID</Label>
+                          <input
+                            value={currentQuestion.paragraph_id || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                paragraph_id: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập paragraph ID"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Options</Label>
+                          {(currentQuestion.options || [""]).map(
+                            (option, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-4"
+                              >
+                                <input
+                                  value={option}
+                                  onChange={(e) => {
+                                    const updatedOptions = [
+                                      ...(currentQuestion.options || [""]),
+                                    ];
+                                    updatedOptions[index] = e.target.value;
+                                    setCurrentQuestion({
+                                      ...currentQuestion,
+                                      options: updatedOptions,
+                                    });
+                                  }}
+                                  placeholder={`Option ${index + 1}`}
+                                  className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                                />
+                                <input
+                                  type="radio"
+                                  checked={currentQuestion.answer === option}
+                                  onChange={() => {
+                                    setCurrentQuestion({
+                                      ...currentQuestion,
+                                      answer: option,
+                                    });
+                                  }}
+                                  disabled={!option.trim()}
+                                />
+                                <button
+                                  onClick={() => {
+                                    const updatedOptions = (
+                                      currentQuestion.options || []
+                                    ).filter((_, i) => i !== index);
+                                    // If the deleted option was the answer, clear the answer
+                                    const updatedAnswer =
+                                      currentQuestion.answer === option
+                                        ? ""
+                                        : currentQuestion.answer || "";
+
+                                    setCurrentQuestion({
+                                      ...currentQuestion,
+                                      options: updatedOptions.length
+                                        ? updatedOptions
+                                        : [""],
+                                      answer: updatedAnswer,
+                                    });
+                                  }}
+                                  className="bg-red-500 text-white p-2 rounded-full"
+                                  disabled={
+                                    (currentQuestion.options || []).length <= 1
+                                  }
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            )
+                          )}
+                          <button
+                            onClick={() => {
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                options: [
+                                  ...(currentQuestion.options || [""]),
+                                  "",
+                                ],
+                              });
+                            }}
+                            className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                          >
+                            <Plus />
+                          </button>
+                        </div>
+                      )}
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "MF" && (
+                        <div className="flex flex-col gap-4">
+                          <div className="font-bold text-lg">
+                            MATCHING FEATURES
+                          </div>
+                          <Label className="text-[14.5px]">Feature</Label>
+                          <input
+                            value={currentQuestion.feature || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                feature: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập feature"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Options</Label>
+                          {(currentQuestion.options || [""]).map(
+                            (option, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-4"
+                              >
+                                <input
+                                  value={option}
+                                  onChange={(e) => {
+                                    const updatedOptions = [
+                                      ...(currentQuestion.options || [""]),
+                                    ];
+                                    updatedOptions[index] = e.target.value;
+                                    setCurrentQuestion({
+                                      ...currentQuestion,
+                                      options: updatedOptions,
+                                    });
+                                  }}
+                                  placeholder={`Option ${index + 1}`}
+                                  className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                                />
+                                <input
+                                  type="radio"
+                                  checked={currentQuestion.answer === option}
+                                  onChange={() => {
+                                    setCurrentQuestion({
+                                      ...currentQuestion,
+                                      answer: option,
+                                    });
+                                  }}
+                                  disabled={!option.trim()}
+                                />
+                                <button
+                                  onClick={() => {
+                                    const updatedOptions = (
+                                      currentQuestion.options || []
+                                    ).filter((_, i) => i !== index);
+                                    // If the deleted option was the answer, clear the answer
+                                    const updatedAnswer =
+                                      currentQuestion.answer === option
+                                        ? ""
+                                        : currentQuestion.answer || "";
+
+                                    setCurrentQuestion({
+                                      ...currentQuestion,
+                                      options: updatedOptions.length
+                                        ? updatedOptions
+                                        : [""],
+                                      answer: updatedAnswer,
+                                    });
+                                  }}
+                                  className="bg-red-500 text-white p-2 rounded-full"
+                                  disabled={
+                                    (currentQuestion.options || []).length <= 1
+                                  }
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            )
+                          )}
+                          <button
+                            onClick={() => {
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                options: [
+                                  ...(currentQuestion.options || [""]),
+                                  "",
+                                ],
+                              });
+                            }}
+                            className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                          >
+                            <Plus />
+                          </button>
+                        </div>
+                      )}
+                      {parts.find((part) => part.part_num === activePart)
+                        ?.selectedQuestionType === "TFNG" && (
+                        <div className="flex flex-col gap-4">
+                          <div className="font-bold text-lg">
+                            TRUE / FALSE / NOT GIVEN
+                          </div>
+                          <Label className="text-[14.5px]">Sentence</Label>
+                          <input
+                            value={currentQuestion.sentence || ""}
+                            onChange={(e) =>
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                sentence: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập câu phát biểu"
+                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                          />
+                          <Label className="text-[14.5px]">Answer</Label>
+                          <div className="flex flex-col gap-2 mt-1">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                id="true-option"
+                                checked={currentQuestion.answer === "TRUE"}
+                                onChange={() => {
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    answer: "TRUE",
+                                  });
+                                }}
+                              />
+                              <label
+                                htmlFor="true-option"
+                                className="cursor-pointer"
+                              >
+                                TRUE
+                              </label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                id="false-option"
+                                checked={currentQuestion.answer === "FALSE"}
+                                onChange={() => {
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    answer: "FALSE",
+                                  });
+                                }}
+                              />
+                              <label
+                                htmlFor="false-option"
+                                className="cursor-pointer"
+                              >
+                                FALSE
+                              </label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                id="not-given-option"
+                                checked={currentQuestion.answer === "NOT GIVEN"}
+                                onChange={() => {
+                                  setCurrentQuestion({
+                                    ...currentQuestion,
+                                    answer: "NOT GIVEN",
+                                  });
+                                }}
+                              />
+                              <label
+                                htmlFor="not-given-option"
+                                className="cursor-pointer"
+                              >
+                                NOT GIVEN
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <button
                         onClick={handleAddQuestion}
                         className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
@@ -774,24 +1242,40 @@ export function ModalCreateListeningDetail({
                           </>
                         )}
                       </button>
-                      <div className="mt-4">
-                        <QuestionList
-                          questions={
-                            parts.find((part) => part.part_num === activePart)
-                              ?.tempQuestions || []
-                          }
-                          onEdit={handleEditQuestion}
-                          onDelete={handleDeleteQuestion}
-                        />
-                      </div>
                     </div>
                   )}
-                  <QuestionList
-                    questions={
-                      parts.find((part) => part.part_num === activePart)
-                        ?.questions || []
-                    }
-                  />
+
+                  {/* Question Lists Section - Always visible */}
+                  <div className="col-span-3 w-full">
+                    {(() => {
+                      const currentPart = parts.find(
+                        (part) => part.part_num === activePart
+                      );
+                      return (
+                        <>
+                          {currentPart &&
+                            currentPart.tempQuestions &&
+                            currentPart.tempQuestions.length > 0 && (
+                              <QuestionList
+                                title="Danh sách chỉnh sửa câu hỏi"
+                                questions={currentPart.tempQuestions}
+                                onEdit={handleEditQuestion}
+                                onDelete={handleDeleteQuestion}
+                              />
+                            )}
+
+                          {/* {currentPart &&
+                            currentPart.questions &&
+                            currentPart.questions.length > 0 && (
+                              <QuestionList
+                                title="Danh sách câu hỏi đã lưu"
+                                questions={currentPart.questions}
+                              />
+                            )} */}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
             )}

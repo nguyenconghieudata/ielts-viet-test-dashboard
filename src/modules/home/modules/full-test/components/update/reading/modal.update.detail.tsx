@@ -23,12 +23,20 @@ import { QuestionList } from "./question-list";
 interface Question {
   _id: string;
   part_id: string;
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answer?: string[];
+  answer?: string | string[]; // Can be array for MP and string for others
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface PartDetails {
@@ -38,7 +46,7 @@ interface PartDetails {
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ModalUpdateReadingDetailProps {
@@ -100,7 +108,11 @@ export function ModalUpdateReadingDetail({
         });
         return false;
       }
-      if (!currentQuestion.answer || currentQuestion.answer.length === 0) {
+      if (
+        !currentQuestion.answer ||
+        (Array.isArray(currentQuestion.answer) &&
+          currentQuestion.answer.length === 0)
+      ) {
         toast({
           variant: "destructive",
           title: "Vui lòng chọn ít nhất một đáp án đúng cho câu trắc nghiệm.",
@@ -121,12 +133,102 @@ export function ModalUpdateReadingDetail({
       }
       if (
         !currentQuestion.answer ||
-        currentQuestion.answer.length === 0 ||
-        !currentQuestion.answer[0].trim()
+        (Array.isArray(currentQuestion.answer) &&
+          (currentQuestion.answer.length === 0 ||
+            !currentQuestion.answer[0].trim()))
       ) {
         toast({
           variant: "destructive",
           title: "Vui lòng nhập đáp án cho câu điền vào chỗ trống.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "MH") {
+      if (!currentQuestion.heading?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập heading.",
+        });
+        return false;
+      }
+      if (!currentQuestion.paragraph_id?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập paragraph ID.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        typeof currentQuestion.answer !== "string" ||
+        !currentQuestion.answer.trim() ||
+        !currentQuestion.options?.includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "MF") {
+      if (!currentQuestion.feature?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập feature.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        typeof currentQuestion.answer !== "string" ||
+        !currentQuestion.answer.trim() ||
+        !currentQuestion.options?.includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "TFNG") {
+      if (!currentQuestion.sentence?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập câu phát biểu.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        typeof currentQuestion.answer !== "string" ||
+        !currentQuestion.answer.trim() ||
+        !["TRUE", "FALSE", "NOT GIVEN"].includes(currentQuestion.answer)
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách TRUE/FALSE/NOT GIVEN.",
         });
         return false;
       }
@@ -149,22 +251,43 @@ export function ModalUpdateReadingDetail({
 
   const handleRemoveChoice = (index: number) => {
     if (currentQuestion.choices && currentQuestion.choices.length > 1) {
+      const choiceToRemove = currentQuestion.choices[index];
+      const updatedChoices = currentQuestion.choices.filter(
+        (_, i) => i !== index
+      );
+
+      // Handle the case where answer is a string or string[]
+      let updatedAnswer = currentQuestion.answer;
+      if (Array.isArray(updatedAnswer)) {
+        updatedAnswer = updatedAnswer.filter(
+          (ans: string) => ans !== choiceToRemove
+        );
+      }
+
       setCurrentQuestion({
         ...currentQuestion,
-        choices: currentQuestion.choices.filter((_, i) => i !== index),
-        answer: currentQuestion.answer?.filter((ans) =>
-          currentQuestion.choices?.includes(ans)
-        ),
+        choices: updatedChoices,
+        answer: updatedAnswer,
       });
     }
   };
 
   const handleAnswerToggle = (choice: string) => {
+    // Handle the case where answer is a string or string[]
+    if (!Array.isArray(currentQuestion.answer)) {
+      // Convert to array if it's a string or undefined
+      setCurrentQuestion({
+        ...currentQuestion,
+        answer: [choice],
+      });
+      return;
+    }
+
     const currentAnswers = currentQuestion.answer || [];
     if (currentAnswers.includes(choice)) {
       setCurrentQuestion({
         ...currentQuestion,
-        answer: currentAnswers.filter((ans) => ans !== choice),
+        answer: currentAnswers.filter((ans: string) => ans !== choice),
       });
     } else {
       setCurrentQuestion({
@@ -186,67 +309,93 @@ export function ModalUpdateReadingDetail({
       return;
     }
 
-    const newQuestion: Question = {
-      _id: currentQuestion._id || Math.random().toString(36).substr(2, 9),
-      part_id: currentQuestion.part_id,
+    let newQuestion: Question = {
+      _id: editingQuestionIndex !== null ? currentQuestion._id : "",
+      part_id: parts.find((part) => part.part_num === activePart)?._id || "",
       q_type: selectedQuestionType,
-      ...(selectedQuestionType === "MP"
-        ? {
-            question: currentQuestion.question || "",
-            choices: currentQuestion.choices || [],
-            answer: currentQuestion.answer || [],
-          }
-        : {
-            start_passage: currentQuestion.start_passage || "",
-            end_passage: currentQuestion.end_passage || "",
-            answer: currentQuestion.answer || [],
-          }),
     };
 
-    const updatedParts = parts.map((part) =>
-      part.part_num === activePart
-        ? {
+    if (selectedQuestionType === "MP") {
+      newQuestion = {
+        ...newQuestion,
+        question: currentQuestion.question || "",
+        choices: currentQuestion.choices || [],
+        answer: currentQuestion.answer || [],
+      };
+    } else if (selectedQuestionType === "FB") {
+      newQuestion = {
+        ...newQuestion,
+        start_passage: currentQuestion.start_passage || "",
+        end_passage: currentQuestion.end_passage || "",
+        answer: currentQuestion.answer || [],
+      };
+    } else if (selectedQuestionType === "MH") {
+      newQuestion = {
+        ...newQuestion,
+        heading: currentQuestion.heading || "",
+        paragraph_id: currentQuestion.paragraph_id || "",
+        options: currentQuestion.options || [],
+        answer: currentQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "MF") {
+      newQuestion = {
+        ...newQuestion,
+        feature: currentQuestion.feature || "",
+        options: currentQuestion.options || [],
+        answer: currentQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "TFNG") {
+      newQuestion = {
+        ...newQuestion,
+        sentence: currentQuestion.sentence || "",
+        answer: currentQuestion.answer || "",
+      };
+    }
+
+    let updatedParts: PartDetails[];
+
+    if (editingQuestionIndex !== null) {
+      // Editing existing question
+      updatedParts = parts.map((part) => {
+        if (part.part_num === activePart) {
+          const updatedTempQuestions = [...part.tempQuestions];
+          updatedTempQuestions[editingQuestionIndex] = newQuestion;
+          return {
             ...part,
-            question:
-              editingQuestionIndex !== null
-                ? part.question.map((q, i) =>
-                    i === editingQuestionIndex ? newQuestion : q
-                  )
-                : [...part.question, newQuestion],
-            tempQuestions:
-              editingQuestionIndex !== null
-                ? part.tempQuestions.map((q, i) =>
-                    i === editingQuestionIndex ? newQuestion : q
-                  )
-                : [...part.tempQuestions, newQuestion],
-            selectedQuestionType: null, // Hide question management form
-          }
-        : part
-    );
+            tempQuestions: updatedTempQuestions,
+            selectedQuestionType: null,
+          };
+        }
+        return part;
+      });
+      setEditingQuestionIndex(null);
+    } else {
+      // Adding new question
+      updatedParts = parts.map((part) =>
+        part.part_num === activePart
+          ? {
+              ...part,
+              tempQuestions: [...part.tempQuestions, newQuestion],
+              selectedQuestionType: null,
+            }
+          : part
+      );
+    }
 
     onPartsUpdate(updatedParts);
 
+    // Reset current question state
     setCurrentQuestion({
       _id: "",
       part_id: "",
       q_type: selectedQuestionType,
-      question: "",
       choices: selectedQuestionType === "MP" ? [""] : undefined,
       answer: [],
-      start_passage: "",
-      end_passage: "",
     });
 
-    setEditingQuestionIndex(null);
     toast({
-      title:
-        editingQuestionIndex !== null
-          ? "Câu hỏi đã được cập nhật"
-          : "Câu hỏi đã được thêm",
-      description:
-        editingQuestionIndex !== null
-          ? "Câu hỏi đã được sửa thành công."
-          : "Câu hỏi mới đã được thêm vào danh sách.",
+      title: "Câu hỏi đã được thêm",
+      description: "Câu hỏi mới đã được thêm vào danh sách.",
     });
   };
 
@@ -333,8 +482,6 @@ export function ModalUpdateReadingDetail({
     });
 
     onPartsUpdate(updatedParts);
-
-    console.log("Updated parts:", updatedParts);
 
     toast({
       title: "Đã lưu câu hỏi",

@@ -1,12 +1,22 @@
 import { Label } from "@/components/ui/label";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
   answers?: string[];
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
+  // For MH, MF, TFNG - single answer
+  answer?: string;
 }
 
 interface QuestionListProps {
@@ -23,7 +33,7 @@ export function QuestionList({
   return (
     <>
       {questions.length > 0 && (
-        <div className="col-span-3 mt-4">
+        <div className="col-span-12 mt-4">
           <Label className="text-lg font-semibold">Danh sách câu hỏi</Label>
           <div className="mt-2 space-y-4">
             {questions.map((question, index) => (
@@ -36,7 +46,13 @@ export function QuestionList({
                     Câu hỏi {index + 1}:{" "}
                     {question.q_type === "MP"
                       ? "Trắc nghiệm"
-                      : "Điền vào chỗ trống"}
+                      : question.q_type === "FB"
+                      ? "Điền vào chỗ trống"
+                      : question.q_type === "MH"
+                      ? "Matching Headings"
+                      : question.q_type === "MF"
+                      ? "Matching Features"
+                      : "True/False/Not Given"}
                   </h3>
                   {(onEdit || onDelete) && (
                     <div className="flex gap-2">
@@ -86,7 +102,7 @@ export function QuestionList({
                         )}
                       </p>
                     </>
-                  ) : (
+                  ) : question.q_type === "FB" ? (
                     <>
                       <p>
                         <strong>Đoạn đầu:</strong>{" "}
@@ -101,6 +117,83 @@ export function QuestionList({
                         {question.answers?.length
                           ? question.answers.join(", ")
                           : "Chưa có đáp án"}
+                      </p>
+                    </>
+                  ) : question.q_type === "MH" ? (
+                    <>
+                      <p>
+                        <strong>Heading:</strong>{" "}
+                        {question.heading || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Paragraph ID:</strong>{" "}
+                        {question.paragraph_id || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Options:</strong>{" "}
+                        {question.options?.length ? (
+                          <ul className="list-disc pl-5">
+                            {question.options.map((option, i) => (
+                              <li key={i}>
+                                {option || "Chưa nhập"}{" "}
+                                {question.answer === option && (
+                                  <span className="text-green-600">
+                                    (Đáp án đúng)
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "Chưa có options"
+                        )}
+                      </p>
+                    </>
+                  ) : question.q_type === "MF" ? (
+                    <>
+                      <p>
+                        <strong>Feature:</strong>{" "}
+                        {question.feature || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Options:</strong>{" "}
+                        {question.options?.length ? (
+                          <ul className="list-disc pl-5">
+                            {question.options.map((option, i) => (
+                              <li key={i}>
+                                {option || "Chưa nhập"}{" "}
+                                {question.answer === option && (
+                                  <span className="text-green-600">
+                                    (Đáp án đúng)
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          "Chưa có options"
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>Sentence:</strong>{" "}
+                        {question.sentence || "Chưa nhập"}
+                      </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span
+                          className={`font-medium ${
+                            question.answer === "TRUE"
+                              ? "text-green-600"
+                              : question.answer === "FALSE"
+                              ? "text-red-600"
+                              : "text-blue-600"
+                          }`}
+                        >
+                          {question.answer || "Chưa chọn"}
+                        </span>
                       </p>
                     </>
                   )}

@@ -24,12 +24,20 @@ import { UploadService } from "@/services/upload";
 interface Question {
   _id: string;
   part_id: string;
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
-  answer?: string[];
+  answer?: string | string[]; // Can be array for MP and string for others
   start_passage?: string;
   end_passage?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface PartDetails {
@@ -39,7 +47,7 @@ interface PartDetails {
   part_num: number;
   question: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 interface ModalUpdateListeningDetailProps {
@@ -166,7 +174,11 @@ export function ModalUpdateListeningDetail({
         });
         return false;
       }
-      if (!currentQuestion.answer || currentQuestion.answer.length === 0) {
+      if (
+        !currentQuestion.answer ||
+        (Array.isArray(currentQuestion.answer) &&
+          currentQuestion.answer.length === 0)
+      ) {
         toast({
           variant: "destructive",
           title: "Vui lòng chọn ít nhất một đáp án đúng cho câu trắc nghiệm.",
@@ -187,12 +199,128 @@ export function ModalUpdateListeningDetail({
       }
       if (
         !currentQuestion.answer ||
-        currentQuestion.answer.length === 0 ||
-        !currentQuestion.answer[0].trim()
+        (Array.isArray(currentQuestion.answer) &&
+          (currentQuestion.answer.length === 0 ||
+            !currentQuestion.answer[0].trim())) ||
+        (typeof currentQuestion.answer === "string" &&
+          !currentQuestion.answer.trim())
       ) {
         toast({
           variant: "destructive",
           title: "Vui lòng nhập đáp án cho câu điền vào chỗ trống.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "MH") {
+      if (!currentQuestion.heading?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập heading.",
+        });
+        return false;
+      }
+      if (!currentQuestion.paragraph_id?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập paragraph ID.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        (typeof currentQuestion.answer === "string" &&
+          !currentQuestion.answer.trim()) ||
+        !currentQuestion.options?.includes(
+          typeof currentQuestion.answer === "string"
+            ? currentQuestion.answer
+            : Array.isArray(currentQuestion.answer) &&
+              currentQuestion.answer.length > 0
+            ? currentQuestion.answer[0]
+            : ""
+        )
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "MF") {
+      if (!currentQuestion.feature?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập feature.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.options ||
+        currentQuestion.options.length < 2 ||
+        currentQuestion.options.some((o) => !o.trim())
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng thêm ít nhất 2 options hợp lệ.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        (typeof currentQuestion.answer === "string" &&
+          !currentQuestion.answer.trim()) ||
+        !currentQuestion.options?.includes(
+          typeof currentQuestion.answer === "string"
+            ? currentQuestion.answer
+            : Array.isArray(currentQuestion.answer) &&
+              currentQuestion.answer.length > 0
+            ? currentQuestion.answer[0]
+            : ""
+        )
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách options.",
+        });
+        return false;
+      }
+    } else if (selectedQuestionType === "TFNG") {
+      if (!currentQuestion.sentence?.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng nhập câu phát biểu.",
+        });
+        return false;
+      }
+      if (
+        !currentQuestion.answer ||
+        (typeof currentQuestion.answer === "string" &&
+          !currentQuestion.answer.trim()) ||
+        (Array.isArray(currentQuestion.answer) &&
+          (currentQuestion.answer.length === 0 ||
+            !currentQuestion.answer[0].trim())) ||
+        !["TRUE", "FALSE", "NOT GIVEN"].includes(
+          typeof currentQuestion.answer === "string"
+            ? currentQuestion.answer
+            : Array.isArray(currentQuestion.answer) &&
+              currentQuestion.answer.length > 0
+            ? currentQuestion.answer[0]
+            : ""
+        )
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Vui lòng chọn một đáp án từ danh sách TRUE/FALSE/NOT GIVEN.",
         });
         return false;
       }
@@ -215,27 +343,56 @@ export function ModalUpdateListeningDetail({
 
   const handleRemoveChoice = (index: number) => {
     if (currentQuestion.choices && currentQuestion.choices.length > 1) {
+      const choiceToRemove = currentQuestion.choices[index];
+      const updatedChoices = currentQuestion.choices.filter(
+        (_, i) => i !== index
+      );
+
+      // Handle answer update based on question type
+      let updatedAnswer = currentQuestion.answer;
+      if (
+        currentQuestion.q_type === "MP" &&
+        Array.isArray(currentQuestion.answer)
+      ) {
+        // For MP, filter out the removed choice from answers array
+        updatedAnswer = currentQuestion.answer.filter(
+          (ans: string) => ans !== choiceToRemove
+        );
+      } else if (currentQuestion.answer === choiceToRemove) {
+        // For other types, if the answer matches the removed choice, clear it
+        updatedAnswer = "";
+      }
+
       setCurrentQuestion({
         ...currentQuestion,
-        choices: currentQuestion.choices.filter((_, i) => i !== index),
-        answer: currentQuestion.answer?.filter((ans) =>
-          currentQuestion.choices?.includes(ans)
-        ),
+        choices: updatedChoices,
+        answer: updatedAnswer,
       });
     }
   };
 
   const handleAnswerToggle = (choice: string) => {
-    const currentAnswers = currentQuestion.answer || [];
-    if (currentAnswers.includes(choice)) {
-      setCurrentQuestion({
-        ...currentQuestion,
-        answer: currentAnswers.filter((ans) => ans !== choice),
-      });
+    if (currentQuestion.q_type === "MP") {
+      // For MP, answer is an array
+      const currentAnswers = Array.isArray(currentQuestion.answer)
+        ? currentQuestion.answer
+        : [];
+      if (currentAnswers.includes(choice)) {
+        setCurrentQuestion({
+          ...currentQuestion,
+          answer: currentAnswers.filter((ans: string) => ans !== choice),
+        });
+      } else {
+        setCurrentQuestion({
+          ...currentQuestion,
+          answer: [...currentAnswers, choice],
+        });
+      }
     } else {
+      // For other types, answer is a string
       setCurrentQuestion({
         ...currentQuestion,
-        answer: [...currentAnswers, choice],
+        answer: choice,
       });
     }
   };
@@ -243,7 +400,6 @@ export function ModalUpdateListeningDetail({
   const handleAddQuestion = () => {
     if (!validateCurrentQuestion()) return;
 
-    // Get the selected question type for the active part
     const selectedQuestionType = parts.find(
       (part) => part.part_num === activePart
     )?.selectedQuestionType;
@@ -253,25 +409,47 @@ export function ModalUpdateListeningDetail({
       return;
     }
 
-    // Create a new question object with the selected type
+    let questionData = {};
+
+    if (selectedQuestionType === "MP") {
+      questionData = {
+        question: currentQuestion.question || "",
+        choices: currentQuestion.choices || [],
+        answer: currentQuestion.answer || [],
+      };
+    } else if (selectedQuestionType === "FB") {
+      questionData = {
+        start_passage: currentQuestion.start_passage || "",
+        end_passage: currentQuestion.end_passage || "",
+        answer: currentQuestion.answer || [],
+      };
+    } else if (selectedQuestionType === "MH") {
+      questionData = {
+        heading: currentQuestion.heading || "",
+        paragraph_id: currentQuestion.paragraph_id || "",
+        options: currentQuestion.options || [],
+        answer: currentQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "MF") {
+      questionData = {
+        feature: currentQuestion.feature || "",
+        options: currentQuestion.options || [],
+        answer: currentQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "TFNG") {
+      questionData = {
+        sentence: currentQuestion.sentence || "",
+        answer: currentQuestion.answer || "",
+      };
+    }
+
     const newQuestion: Question = {
-      _id: currentQuestion._id || "",
-      part_id: currentQuestion.part_id || "",
+      _id: currentQuestion._id || Math.random().toString(36).substr(2, 9),
+      part_id: currentQuestion.part_id,
       q_type: selectedQuestionType,
-      ...(selectedQuestionType === "MP"
-        ? {
-            question: currentQuestion.question || "",
-            choices: currentQuestion.choices || [],
-            answer: currentQuestion.answer || [],
-          }
-        : {
-            start_passage: currentQuestion.start_passage || "",
-            end_passage: currentQuestion.end_passage || "",
-            answer: currentQuestion.answer || [],
-          }),
+      ...questionData,
     };
 
-    // Update the parts state
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
@@ -293,10 +471,9 @@ export function ModalUpdateListeningDetail({
         : part
     );
 
-    // Update the parent component's state
     onPartsUpdate(updatedParts);
 
-    // Reset the form
+    // Reset current question state
     setCurrentQuestion({
       _id: "",
       part_id: "",
@@ -306,6 +483,14 @@ export function ModalUpdateListeningDetail({
       answer: [],
       start_passage: "",
       end_passage: "",
+      heading: "",
+      options:
+        selectedQuestionType === "MH" || selectedQuestionType === "MF"
+          ? [""]
+          : undefined,
+      paragraph_id: "",
+      feature: "",
+      sentence: "",
     });
 
     setEditingQuestionIndex(null);
@@ -380,18 +565,51 @@ export function ModalUpdateListeningDetail({
               q_type: "MP",
               question: question.question || "",
               choices: question.choices || [],
-              answer: question.answer || [],
+              answer: Array.isArray(question.answer) ? question.answer : [],
             };
-          } else {
+          } else if (question.q_type === "FB") {
             return {
               _id: question._id || "",
               part_id: question.part_id || "",
               q_type: "FB",
-              image: part.image || "",
               start_passage: question.start_passage || "",
               end_passage: question.end_passage || "",
-              answer: question.answer || [],
+              answer: Array.isArray(question.answer)
+                ? question.answer
+                : [question.answer || ""],
             };
+          } else if (question.q_type === "MH") {
+            return {
+              _id: question._id || "",
+              part_id: question.part_id || "",
+              q_type: "MH",
+              heading: question.heading || "",
+              paragraph_id: question.paragraph_id || "",
+              options: question.options || [],
+              answer:
+                typeof question.answer === "string" ? question.answer : "",
+            };
+          } else if (question.q_type === "MF") {
+            return {
+              _id: question._id || "",
+              part_id: question.part_id || "",
+              q_type: "MF",
+              feature: question.feature || "",
+              options: question.options || [],
+              answer:
+                typeof question.answer === "string" ? question.answer : "",
+            };
+          } else if (question.q_type === "TFNG") {
+            return {
+              _id: question._id || "",
+              part_id: question.part_id || "",
+              q_type: "TFNG",
+              sentence: question.sentence || "",
+              answer:
+                typeof question.answer === "string" ? question.answer : "",
+            };
+          } else {
+            return question;
           }
         }
       );
@@ -405,6 +623,8 @@ export function ModalUpdateListeningDetail({
     });
 
     onPartsUpdate(updatedParts);
+
+    console.log("Updated parts:", updatedParts);
 
     toast({
       title: "Đã lưu câu hỏi",
@@ -596,7 +816,12 @@ export function ModalUpdateListeningDetail({
                       />
                       <Label className="text-[14.5px]">Đáp án</Label>
                       <input
-                        value={currentQuestion.answer?.[0] || ""}
+                        value={
+                          Array.isArray(currentQuestion.answer) &&
+                          currentQuestion.answer.length > 0
+                            ? currentQuestion.answer[0]
+                            : currentQuestion.answer || ""
+                        }
                         onChange={(e) =>
                           setCurrentQuestion({
                             ...currentQuestion,
@@ -606,6 +831,306 @@ export function ModalUpdateListeningDetail({
                         placeholder="Nhập đáp án"
                         className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
                       />
+                    </div>
+                  )}
+                  {parts.find((part) => part.part_num === activePart)
+                    ?.selectedQuestionType === "MH" && (
+                    <div className="flex flex-col gap-4">
+                      <div className="font-bold text-lg">MATCHING HEADINGS</div>
+                      <Label className="text-[14.5px]">Heading</Label>
+                      <input
+                        value={currentQuestion.heading || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            heading: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập heading"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Paragraph ID</Label>
+                      <input
+                        value={currentQuestion.paragraph_id || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            paragraph_id: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập paragraph ID"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Options</Label>
+                      {(currentQuestion.options || [""]).map(
+                        (option, index) => (
+                          <div key={index} className="flex items-center gap-4">
+                            <input
+                              value={option}
+                              onChange={(e) => {
+                                const updatedOptions = [
+                                  ...(currentQuestion.options || [""]),
+                                ];
+                                updatedOptions[index] = e.target.value;
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  options: updatedOptions,
+                                });
+                              }}
+                              placeholder={`Option ${index + 1}`}
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                            />
+                            <input
+                              type="radio"
+                              checked={
+                                typeof currentQuestion.answer === "string"
+                                  ? currentQuestion.answer === option
+                                  : Array.isArray(currentQuestion.answer) &&
+                                    currentQuestion.answer.length > 0 &&
+                                    currentQuestion.answer[0] === option
+                              }
+                              onChange={() => {
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  answer: option,
+                                });
+                              }}
+                              disabled={!option.trim()}
+                            />
+                            <button
+                              onClick={() => {
+                                const updatedOptions = (
+                                  currentQuestion.options || []
+                                ).filter((_, i) => i !== index);
+                                // If the deleted option was the answer, clear the answer
+                                const updatedAnswer =
+                                  typeof currentQuestion.answer === "string" &&
+                                  currentQuestion.answer === option
+                                    ? ""
+                                    : currentQuestion.answer;
+
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  options: updatedOptions.length
+                                    ? updatedOptions
+                                    : [""],
+                                  answer: updatedAnswer,
+                                });
+                              }}
+                              className="bg-red-500 text-white p-2 rounded-full"
+                              disabled={
+                                (currentQuestion.options || []).length <= 1
+                              }
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )
+                      )}
+                      <button
+                        onClick={() => {
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            options: [...(currentQuestion.options || [""]), ""],
+                          });
+                        }}
+                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                      >
+                        <Plus />
+                      </button>
+                    </div>
+                  )}
+                  {parts.find((part) => part.part_num === activePart)
+                    ?.selectedQuestionType === "MF" && (
+                    <div className="flex flex-col gap-4">
+                      <div className="font-bold text-lg">MATCHING FEATURES</div>
+                      <Label className="text-[14.5px]">Feature</Label>
+                      <input
+                        value={currentQuestion.feature || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            feature: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập feature"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Options</Label>
+                      {(currentQuestion.options || [""]).map(
+                        (option, index) => (
+                          <div key={index} className="flex items-center gap-4">
+                            <input
+                              value={option}
+                              onChange={(e) => {
+                                const updatedOptions = [
+                                  ...(currentQuestion.options || [""]),
+                                ];
+                                updatedOptions[index] = e.target.value;
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  options: updatedOptions,
+                                });
+                              }}
+                              placeholder={`Option ${index + 1}`}
+                              className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
+                            />
+                            <input
+                              type="radio"
+                              checked={
+                                typeof currentQuestion.answer === "string"
+                                  ? currentQuestion.answer === option
+                                  : Array.isArray(currentQuestion.answer) &&
+                                    currentQuestion.answer.length > 0 &&
+                                    currentQuestion.answer[0] === option
+                              }
+                              onChange={() => {
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  answer: option,
+                                });
+                              }}
+                              disabled={!option.trim()}
+                            />
+                            <button
+                              onClick={() => {
+                                const updatedOptions = (
+                                  currentQuestion.options || []
+                                ).filter((_, i) => i !== index);
+                                // If the deleted option was the answer, clear the answer
+                                const updatedAnswer =
+                                  typeof currentQuestion.answer === "string" &&
+                                  currentQuestion.answer === option
+                                    ? ""
+                                    : currentQuestion.answer;
+
+                                setCurrentQuestion({
+                                  ...currentQuestion,
+                                  options: updatedOptions.length
+                                    ? updatedOptions
+                                    : [""],
+                                  answer: updatedAnswer,
+                                });
+                              }}
+                              className="bg-red-500 text-white p-2 rounded-full"
+                              disabled={
+                                (currentQuestion.options || []).length <= 1
+                              }
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )
+                      )}
+                      <button
+                        onClick={() => {
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            options: [...(currentQuestion.options || [""]), ""],
+                          });
+                        }}
+                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
+                      >
+                        <Plus />
+                      </button>
+                    </div>
+                  )}
+                  {parts.find((part) => part.part_num === activePart)
+                    ?.selectedQuestionType === "TFNG" && (
+                    <div className="flex flex-col gap-4">
+                      <div className="font-bold text-lg">
+                        TRUE / FALSE / NOT GIVEN
+                      </div>
+                      <Label className="text-[14.5px]">Sentence</Label>
+                      <input
+                        value={currentQuestion.sentence || ""}
+                        onChange={(e) =>
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            sentence: e.target.value,
+                          })
+                        }
+                        placeholder="Nhập câu phát biểu"
+                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                      />
+                      <Label className="text-[14.5px]">Answer</Label>
+                      <div className="flex flex-col gap-2 mt-1">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            id="true-option"
+                            checked={
+                              typeof currentQuestion.answer === "string"
+                                ? currentQuestion.answer === "TRUE"
+                                : Array.isArray(currentQuestion.answer) &&
+                                  currentQuestion.answer.length > 0 &&
+                                  currentQuestion.answer[0] === "TRUE"
+                            }
+                            onChange={() => {
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                answer: "TRUE",
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor="true-option"
+                            className="cursor-pointer"
+                          >
+                            TRUE
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            id="false-option"
+                            checked={
+                              typeof currentQuestion.answer === "string"
+                                ? currentQuestion.answer === "FALSE"
+                                : Array.isArray(currentQuestion.answer) &&
+                                  currentQuestion.answer.length > 0 &&
+                                  currentQuestion.answer[0] === "FALSE"
+                            }
+                            onChange={() => {
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                answer: "FALSE",
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor="false-option"
+                            className="cursor-pointer"
+                          >
+                            FALSE
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            id="not-given-option"
+                            checked={
+                              typeof currentQuestion.answer === "string"
+                                ? currentQuestion.answer === "NOT GIVEN"
+                                : Array.isArray(currentQuestion.answer) &&
+                                  currentQuestion.answer.length > 0 &&
+                                  currentQuestion.answer[0] === "NOT GIVEN"
+                            }
+                            onChange={() => {
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                answer: "NOT GIVEN",
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor="not-given-option"
+                            className="cursor-pointer"
+                          >
+                            NOT GIVEN
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   )}
                   <button

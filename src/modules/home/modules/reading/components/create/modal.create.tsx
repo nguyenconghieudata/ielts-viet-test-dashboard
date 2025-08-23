@@ -21,9 +21,10 @@ import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ReadingService } from "@/services/reading";
 import { ModalCreateReadingDetail } from "./modal.create.detail";
+import { log } from "console";
 
 interface Question {
-  q_type: "MP" | "FB";
+  q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
   question?: string;
   choices?: string[];
   answers?: string[];
@@ -31,6 +32,14 @@ interface Question {
   end_passage?: string;
   isMultiple?: boolean;
   image?: string;
+  // MH specific properties
+  heading?: string;
+  options?: string[];
+  paragraph_id?: string;
+  // MF specific properties
+  feature?: string;
+  // TFNG specific properties
+  sentence?: string;
 }
 
 interface PartDetails {
@@ -39,7 +48,7 @@ interface PartDetails {
   part_num: number;
   questions: Question[];
   tempQuestions: Question[];
-  selectedQuestionType: "MP" | "FB" | null;
+  selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
 export function ModalCreateReading() {
@@ -211,6 +220,20 @@ export function ModalCreateReading() {
           transformedQuestion.isMultiple = (question.answers?.length || 0) > 1;
         } else if (question.q_type === "FB") {
           transformedQuestion.image = "";
+        } else if (question.q_type === "MH") {
+          transformedQuestion.image = "";
+          // Ensure options field is included
+          if (!transformedQuestion.options) {
+            transformedQuestion.options = [];
+          }
+        } else if (question.q_type === "MF") {
+          transformedQuestion.image = "";
+          // Ensure options field is included
+          if (!transformedQuestion.options) {
+            transformedQuestion.options = [];
+          }
+        } else if (question.q_type === "TFNG") {
+          transformedQuestion.image = "";
         }
         return transformedQuestion;
       }),
@@ -225,9 +248,8 @@ export function ModalCreateReading() {
     };
 
     const response = await ReadingService.createReading(body);
-    console.log("CHECK RESPONSE", response);
-
     setIsLoading(false);
+    window.location.href = "/?tab=reading";
   };
 
   return (
