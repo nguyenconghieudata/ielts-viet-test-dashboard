@@ -71,8 +71,11 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Handle preflight requests automatically
+  console.log("POST request received to /api/upload");
+
+  // Check if this is an OPTIONS request that wasn't caught by the OPTIONS handler
   if (request.method === "OPTIONS") {
+    console.log("Handling OPTIONS request in POST handler");
     return new Response(null, {
       status: 200,
       headers: corsHeaders(),
@@ -80,11 +83,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    console.log("Attempting to parse form data");
     const formData = await request.formData();
     const file = formData.get("file") as File;
     console.log("========= file", file);
 
     if (!file) {
+      console.log("No file provided in request");
       return new Response(JSON.stringify({ error: "No file provided" }), {
         status: 400,
         headers: {
@@ -98,8 +103,12 @@ export async function POST(request: NextRequest) {
     const fileName = file.name;
     const fileSize = file.size;
     const fileType = file.type;
+    console.log(
+      `File details: ${fileName}, ${fileSize} bytes, type: ${fileType}`
+    );
 
     if (!validatePDFFile(fileType)) {
+      console.log("Invalid file type provided");
       return new Response(
         JSON.stringify({
           error: "Invalid file type. Only PDF files are allowed",
@@ -114,9 +123,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("Extracting PDF content");
     const { content, pages } = await extractPDFContent(fileBuffer);
 
     if (!content || pages.length === 0) {
+      console.log("Failed to extract content from PDF");
       return new Response(
         JSON.stringify({
           error: "Unable to extract content from PDF file",
@@ -131,6 +142,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("Generating JSON from content");
     const fileJson = await generateJson(content);
     const documentData = {
       file_name: fileName,
@@ -149,7 +161,7 @@ export async function POST(request: NextRequest) {
       const result = await filesCollection.insertOne(documentData);
       const fileId = result.insertedId.toString();
 
-      // console.log("Document inserted successfully with ID:", fileId);
+      console.log("Document inserted successfully with ID:", fileId);
       const responseData = {
         message: "PDF uploaded and processed successfully",
         file_id: fileId,
