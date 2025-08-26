@@ -71,31 +71,48 @@ export default function Reading() {
     formData.append("file", file);
     setIsUploading(true);
     try {
-      const result = await FileService.uploadFile(formData);
-      if (!result || !result.file_id) {
-        throw new Error("Failed to upload file");
+      // Check if file is a PDF
+      if (file.type !== "application/pdf") {
+        throw new Error("Only PDF files are supported");
       }
 
+      console.log("Starting file upload process...");
+      const result = await FileService.uploadFile(formData);
       console.log("========= upload result", result);
+
+      if (!result || !result.file_id) {
+        throw new Error("Failed to upload file: No file ID returned");
+      }
+
+      console.log("File uploaded successfully, retrieving content...");
       const fileData = await FileService.getFileById(result.file_id);
+      console.log(
+        "========= file data retrieved, length:",
+        fileData?.file_content?.length || 0
+      );
 
       if (!fileData || !fileData.file_content) {
         throw new Error("Failed to get file content");
       }
 
-      console.log("========= file data retrieved successfully");
+      console.log("Processing file with AI...");
       const body = {
         content: fileData.file_content,
       };
+
       const outputUrl = await ReadingService.createReadingFileAi(
         JSON.stringify(body)
       );
+      console.log("========= outputUrl", outputUrl);
+
+      console.log("AI processing complete, refreshing data...");
       await init();
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     } catch (error) {
       console.error("Failed to upload file:", error);
+
       alert(
         "Failed to upload file: " +
           (error instanceof Error ? error.message : "Unknown error")

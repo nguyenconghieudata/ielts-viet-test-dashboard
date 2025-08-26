@@ -99,30 +99,40 @@ const createReadingFileAi = async (payload: any) => {
   try {
     let outputUrl = "";
     const myHeaders = new Headers();
-    // console.log("========= payload", payload);
 
     myHeaders.append("Content-Type", "application/json");
-    const response = await fetch(
-      // `https://api.farmcode.io.vn/v1/ielts-viet/test/ask-chatgpt`,
-      API.READING_FILE_AI,
-      {
-        method: "POST",
-        headers: myHeaders,
-        body: payload,
-      }
-    );
+    console.log("Making request to:", API.READING_FILE_AI);
+
+    const response = await fetch(API.READING_FILE_AI, {
+      method: "POST",
+      headers: myHeaders,
+      body: payload,
+    });
+
     if (!response.ok) {
-      throw new Error(`Failed - Status: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
+      throw new Error(`Failed - Status: ${response.status} - ${errorText}`);
     }
+
     const data = await response.json();
-    // console.log("========= data", data);
-    if (data) {
-      outputUrl = data.outputUrl;
+    console.log("========= createReadingFileAi response:", data);
+
+    if (!data) {
+      throw new Error("Empty response from AI processing");
     }
+
+    outputUrl = data.outputUrl;
+    if (!outputUrl) {
+      throw new Error("No output URL returned from AI processing");
+    }
+
     return outputUrl;
   } catch (error: any) {
     console.error("========= Error Create Reading File Ai:", error);
-    return false;
+    throw new Error(
+      error instanceof Error ? error.message : "AI processing failed"
+    );
   }
 };
 

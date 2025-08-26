@@ -14,25 +14,26 @@ const uploadFile = async (formData: any) => {
     const response = await fetch(API.UPLOAD_FILE, {
       method: "POST",
       body: apiFormData,
-      headers: {
-        // Remove Content-Type header to let the browser set it correctly with the boundary for FormData
-      },
     });
+    console.log("========= response", response);
 
     if (!response.ok) {
-      throw new Error(`Failed - Status: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
+      throw new Error(`Failed - Status: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
+    console.log("========= data", data);
 
     // Format the response to match the format expected by the client code
     return {
-      file_id: data.data?.id || data.id || "",
+      file_id: data.file_id || "",
       message: data.message || "File uploaded successfully",
     };
   } catch (error: any) {
     console.error("========= Error Upload File:", error);
-    return false;
+    throw new Error(error instanceof Error ? error.message : "Upload failed");
   }
 };
 
@@ -42,9 +43,12 @@ const getFileById = async (id: string) => {
       method: "GET",
     });
     if (!response.ok) {
-      throw new Error(`Failed - Status: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
+      throw new Error(`Failed - Status: ${response.status} - ${errorText}`);
     }
     const data = await response.json();
+    console.log("========= file data", data);
 
     // Format the response to match what the client code expects
     const fileData = data.data || data;
@@ -54,7 +58,9 @@ const getFileById = async (id: string) => {
     };
   } catch (error: any) {
     console.error("========= Error Get File By Id:", error);
-    return false;
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to get file"
+    );
   }
 };
 
