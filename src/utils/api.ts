@@ -2,8 +2,8 @@
 const BASE_URL = "http://localhost:8000/v1";
 
 // Determine if we're in a production environment
-// const isProduction = process.env.NODE_ENV === "production";
-// const APP_URL = isProduction ? "https://portal.ieltsviet.edu.vn" : "";
+const isProduction = process.env.NODE_ENV === "production";
+const APP_URL = isProduction ? "https://portal.ieltsviet.edu.vn" : "";
 
 export const API = {
   // ACCOUNT
@@ -57,8 +57,8 @@ export const API = {
   DELETE_USER: `${BASE_URL}/ielts-viet/user`,
 
   // FILE
-  UPLOAD_FILE: "/api/upload",
-  READING_FILE_AI: "/api/reading-file-ai",
+  UPLOAD_FILE: `${APP_URL}/api/upload`,
+  READING_FILE_AI: `${APP_URL}/api/reading-file-ai`,
   READING_FILE_AI_PROCESS: `${BASE_URL}/ielts-viet/test/ask-chatgpt`,
   GET_FILE_BY_ID: `${BASE_URL}/ielts-viet/file`,
 };

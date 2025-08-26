@@ -14,6 +14,14 @@ const uploadFile = async (formData: any) => {
     const response = await fetch(API.UPLOAD_FILE, {
       method: "POST",
       body: apiFormData,
+      headers: {
+        // Don't set Content-Type header when sending FormData
+        // Browser will automatically set the correct multipart/form-data with boundary
+        Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      // Include credentials if needed for cookies
+      credentials: "same-origin",
     });
     console.log("========= response", response);
 
