@@ -8,11 +8,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Skip middleware for the API test page
-  if (req.nextUrl.pathname === ROUTES.API_TEST) {
-    return NextResponse.next();
-  }
-
   const cookie = req.cookies.get("isLogin");
   const url = req.nextUrl;
   if (cookie) {
