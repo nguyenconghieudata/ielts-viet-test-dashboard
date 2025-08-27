@@ -266,6 +266,8 @@ export default function Reading() {
         content: fileData.file_content,
       };
 
+      console.log(body);
+
       const outputUrl = await ReadingService.createReadingFileAi(
         JSON.stringify(body)
       );
