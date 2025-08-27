@@ -33,7 +33,7 @@ const uploadFile = async (formData: any) => {
     };
   } catch (error: any) {
     console.error("========= Error Upload File:", error);
-    throw new Error(error instanceof Error ? error.message : "Upload failed");
+    return false;
   }
 };
 
@@ -43,9 +43,7 @@ const getFileById = async (id: string) => {
       method: "GET",
     });
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Error response:", errorText);
-      throw new Error(`Failed - Status: ${response.status} - ${errorText}`);
+      throw new Error(`Failed - Status: ${response.status}`);
     }
     const data = await response.json();
     console.log("========= file data", data);
@@ -58,9 +56,7 @@ const getFileById = async (id: string) => {
     };
   } catch (error: any) {
     console.error("========= Error Get File By Id:", error);
-    throw new Error(
-      error instanceof Error ? error.message : "Failed to get file"
-    );
+    return false;
   }
 };
 

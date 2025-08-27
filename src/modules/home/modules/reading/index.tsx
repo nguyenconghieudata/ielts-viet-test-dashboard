@@ -10,6 +10,18 @@ import { IMAGES } from "@/utils/image";
 import { ModalUpdateReading } from "./components/update/modal.update";
 import { FileService } from "@/services/file";
 
+// Define interface for AI generated data
+interface AIGeneratedData {
+  name?: string;
+  time?: number;
+  parts?: {
+    content: string;
+    questions: any[];
+    part_num: number;
+  }[];
+  thumbnail?: string;
+}
+
 export default function Reading() {
   const COUNT = 5;
 
@@ -24,6 +36,11 @@ export default function Reading() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+
+  // State for AI generated data and modal control
+  const [aiGeneratedData, setAiGeneratedData] =
+    useState<AIGeneratedData | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -60,6 +77,154 @@ export default function Reading() {
     }
   };
 
+  // Parse AI response and format it for the create modal
+  const parseAIResponse = (outputUrl: any): AIGeneratedData => {
+    let formattedData: AIGeneratedData = {
+      name: "",
+      time: 60, // Default time
+      parts: [],
+    };
+
+    try {
+      // If outputUrl is already an object
+      if (typeof outputUrl === "object" && outputUrl !== null) {
+        // Extract title/name from various possible formats
+        formattedData.name =
+          outputUrl.title ||
+          outputUrl.name ||
+          outputUrl.reading_title ||
+          "New Reading Test";
+
+        // Extract time from various possible formats
+        formattedData.time =
+          outputUrl.time || outputUrl.duration || outputUrl.reading_time || 60;
+
+        // Process parts based on different possible structures
+        if (outputUrl.passages && Array.isArray(outputUrl.passages)) {
+          // Format: { passages: [{ text, questions }] }
+          formattedData.parts = outputUrl.passages.map(
+            (passage: any, index: number) => ({
+              content: passage.text || passage.content || "",
+              part_num: passage.part_num || index + 1,
+              questions: formatQuestions(passage.questions || []),
+            })
+          );
+        } else if (outputUrl.parts && Array.isArray(outputUrl.parts)) {
+          // Format: { parts: [{ content, questions }] }
+          formattedData.parts = outputUrl.parts.map(
+            (part: any, index: number) => ({
+              content: part.content || part.text || "",
+              part_num: part.part_num || index + 1,
+              questions: formatQuestions(part.questions || []),
+            })
+          );
+        } else if (outputUrl.sections && Array.isArray(outputUrl.sections)) {
+          // Format: { sections: [{ content, questions }] }
+          formattedData.parts = outputUrl.sections.map(
+            (section: any, index: number) => ({
+              content: section.content || section.text || "",
+              part_num: section.part_num || index + 1,
+              questions: formatQuestions(section.questions || []),
+            })
+          );
+        } else if (outputUrl.content || outputUrl.text) {
+          // Single passage format
+          formattedData.parts = [
+            {
+              content: outputUrl.content || outputUrl.text || "",
+              part_num: 1,
+              questions: formatQuestions(outputUrl.questions || []),
+            },
+          ];
+        }
+      }
+
+      return formattedData;
+    } catch (error) {
+      console.error("Error parsing AI response:", error);
+      return formattedData;
+    }
+  };
+
+  // Helper function to format questions based on their type
+  const formatQuestions = (questions: any[]): any[] => {
+    if (!Array.isArray(questions)) return [];
+
+    return questions.map((q) => {
+      // Try to determine the question type
+      let questionType = q.q_type || q.type || "MP"; // Default to multiple choice
+
+      // Normalize question type to expected format
+      if (
+        questionType.toUpperCase().includes("MULTIPLE") ||
+        questionType.toUpperCase().includes("MC")
+      ) {
+        questionType = "MP";
+      } else if (
+        questionType.toUpperCase().includes("FILL") ||
+        questionType.toUpperCase().includes("FB")
+      ) {
+        questionType = "FB";
+      } else if (
+        questionType.toUpperCase().includes("HEADING") ||
+        questionType.toUpperCase().includes("MH")
+      ) {
+        questionType = "MH";
+      } else if (
+        questionType.toUpperCase().includes("FEATURE") ||
+        questionType.toUpperCase().includes("MF")
+      ) {
+        questionType = "MF";
+      } else if (
+        questionType.toUpperCase().includes("TRUE") ||
+        questionType.toUpperCase().includes("TFNG")
+      ) {
+        questionType = "TFNG";
+      }
+
+      // Format the question based on its type
+      switch (questionType) {
+        case "MP":
+          return {
+            q_type: "MP",
+            question: q.question || q.text || "",
+            choices: q.choices || q.options || [],
+            answers: q.answers || (q.answer ? [q.answer] : []),
+          };
+        case "FB":
+          return {
+            q_type: "FB",
+            start_passage: q.start_passage || q.start || "",
+            end_passage: q.end_passage || q.end || "",
+            answers: q.answers || (q.answer ? [q.answer] : []),
+          };
+        case "MH":
+          return {
+            q_type: "MH",
+            heading: q.heading || "",
+            paragraph_id: q.paragraph_id || q.paragraph || "",
+            options: q.options || [],
+            answer: q.answer || "",
+          };
+        case "MF":
+          return {
+            q_type: "MF",
+            feature: q.feature || "",
+            options: q.options || [],
+            answer: q.answer || "",
+          };
+        case "TFNG":
+          return {
+            q_type: "TFNG",
+            sentence: q.sentence || q.text || "",
+            answer: q.answer || "",
+          };
+        default:
+          return q;
+      }
+    });
+  };
+
   const handleFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -76,37 +241,118 @@ export default function Reading() {
         throw new Error("Only PDF files are supported");
       }
 
-      console.log("Starting file upload process...");
+      // console.log("Starting file upload process...");
       const result = await FileService.uploadFile(formData);
-      console.log("========= upload result", result);
+      // console.log("========= upload result", result);
 
       if (!result || !result.file_id) {
         throw new Error("Failed to upload file: No file ID returned");
       }
 
-      console.log("File uploaded successfully, retrieving content...");
+      // console.log("File uploaded successfully, retrieving content...");
       const fileData = await FileService.getFileById(result.file_id);
-      console.log(
-        "========= file data retrieved, length:",
-        fileData?.file_content?.length || 0
-      );
+      // console.log(
+      //   "========= file data retrieved, length:",
+      //   fileData?.file_content?.length || 0
+      // );
 
       if (!fileData || !fileData.file_content) {
         throw new Error("Failed to get file content");
       }
 
-      console.log("Processing file with AI...");
+      // console.log("Processing file with AI...");
       const body = {
+        test_type: "R",
         content: fileData.file_content,
       };
 
       const outputUrl = await ReadingService.createReadingFileAi(
         JSON.stringify(body)
       );
-      console.log("========= outputUrl", outputUrl);
 
-      console.log("AI processing complete, refreshing data...");
-      await init();
+      // Format outputUrl to correct JSON form
+      let formattedOutput;
+      try {
+        // Check if outputUrl is already a JSON object
+        if (typeof outputUrl === "object" && outputUrl !== null) {
+          formattedOutput = outputUrl;
+        }
+        // Check if it's a JSON string
+        else if (typeof outputUrl === "string") {
+          try {
+            formattedOutput = JSON.parse(outputUrl);
+          } catch (parseError) {
+            // If it's not valid JSON, try to clean it up
+            // Remove any leading/trailing non-JSON characters
+            let jsonString = outputUrl.trim();
+
+            // Find the first { and last } to extract valid JSON
+            const firstBrace = jsonString.indexOf("{");
+            const lastBrace = jsonString.lastIndexOf("}");
+
+            if (
+              firstBrace !== -1 &&
+              lastBrace !== -1 &&
+              lastBrace > firstBrace
+            ) {
+              jsonString = jsonString.substring(firstBrace, lastBrace + 1);
+              try {
+                formattedOutput = JSON.parse(jsonString);
+              } catch (nestedError) {
+                // If still not valid, try to fix common JSON issues
+                // Replace single quotes with double quotes
+                jsonString = jsonString.replace(/'/g, '"');
+                // Fix unquoted keys
+                jsonString = jsonString.replace(/(\w+):/g, '"$1":');
+                formattedOutput = JSON.parse(jsonString);
+              }
+            } else {
+              throw new Error(
+                "Could not find valid JSON structure in response"
+              );
+            }
+          }
+        } else {
+          throw new Error("Invalid response format");
+        }
+
+        console.log("========= formatted output", formattedOutput);
+
+        // If we successfully parsed the JSON but it's still not in the right format,
+        // try to extract the relevant data
+        if (formattedOutput && typeof formattedOutput === "object") {
+          // If the response contains nested JSON as a string, parse that too
+          if (
+            typeof formattedOutput.outputUrl === "string" &&
+            formattedOutput.outputUrl.includes("{")
+          ) {
+            try {
+              const nestedJson = JSON.parse(formattedOutput.outputUrl);
+              formattedOutput = nestedJson;
+            } catch (nestedError) {
+              // If nested parsing fails, keep the original parsed object
+              console.warn(
+                "Failed to parse nested JSON in outputUrl",
+                nestedError
+              );
+            }
+          }
+        }
+
+        // Parse AI response and open create modal
+        const parsedData = parseAIResponse(formattedOutput);
+        setAiGeneratedData(parsedData);
+        setIsCreateModalOpen(true);
+      } catch (jsonError) {
+        console.error(
+          "Failed to parse response as JSON:",
+          jsonError,
+          "Original response:",
+          outputUrl
+        );
+        throw new Error("Failed to parse response from server");
+      }
+
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -160,7 +406,11 @@ export default function Reading() {
             </h5>
           </div>
           <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-            <ModalCreateReading />
+            <ModalCreateReading
+              aiData={aiGeneratedData}
+              isOpen={isCreateModalOpen}
+              onOpenChange={setIsCreateModalOpen}
+            />
             <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
               <button
                 type="button"

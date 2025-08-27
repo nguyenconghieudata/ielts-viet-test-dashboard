@@ -45,9 +45,9 @@ export function QuestionList({
                   <h3 className="text-md font-medium text-indigo-600">
                     Câu hỏi {index + 1}:{" "}
                     {question.q_type === "MP"
-                      ? "Trắc nghiệm"
+                      ? "Multiple Choice"
                       : question.q_type === "FB"
-                      ? "Điền vào chỗ trống"
+                      ? "Fill in the blanks"
                       : question.q_type === "MH"
                       ? "Matching Headings"
                       : question.q_type === "MF"
@@ -101,6 +101,14 @@ export function QuestionList({
                           "Chưa có lựa chọn"
                         )}
                       </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answers?.length
+                            ? question.answers.join(", ")
+                            : "Chưa có đáp án"}
+                        </span>
+                      </p>
                     </>
                   ) : question.q_type === "FB" ? (
                     <>
@@ -113,10 +121,12 @@ export function QuestionList({
                         {question.end_passage || "Chưa nhập"}
                       </p>
                       <p>
-                        <strong>Đáp án:</strong>{" "}
-                        {question.answers?.length
-                          ? question.answers.join(", ")
-                          : "Chưa có đáp án"}
+                        <strong>Answer:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answers?.length
+                            ? question.answers.join(", ")
+                            : "Chưa có đáp án"}
+                        </span>
                       </p>
                     </>
                   ) : question.q_type === "MH" ? (
@@ -148,6 +158,12 @@ export function QuestionList({
                           "Chưa có options"
                         )}
                       </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answer || "Chưa có đáp án"}
+                        </span>
+                      </p>
                     </>
                   ) : question.q_type === "MF" ? (
                     <>
@@ -173,6 +189,12 @@ export function QuestionList({
                         ) : (
                           "Chưa có options"
                         )}
+                      </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answer || "Chưa có đáp án"}
+                        </span>
                       </p>
                     </>
                   ) : (

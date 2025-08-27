@@ -14,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader, Plus, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ProductDescriptionEditor from "../quill";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
@@ -87,6 +87,75 @@ export function ModalCreateReadingDetail({
     number | null
   >(null);
 
+  // Effect to handle AI-generated questions when parts change
+  useEffect(() => {
+    if (parts && parts.length > 0) {
+      // Debug log to see the current state of parts
+      console.log("Current parts state:", parts);
+
+      // Check if any parts have questions that need to be processed
+      const hasAiQuestions = parts.some(
+        (part) =>
+          part.questions &&
+          part.questions.length > 0 &&
+          part.tempQuestions.length === 0 &&
+          part.selectedQuestionType === null
+      );
+
+      if (hasAiQuestions) {
+        console.log("Found AI-generated questions to process");
+
+        // Process each part with questions
+        const updatedParts = parts.map((part) => {
+          // Skip parts without questions or already processed parts
+          if (
+            !part.questions ||
+            part.questions.length === 0 ||
+            part.tempQuestions.length > 0 ||
+            part.selectedQuestionType !== null
+          ) {
+            return part;
+          }
+
+          console.log(
+            `Processing questions for part ${part.part_num}:`,
+            part.questions
+          );
+
+          // Determine the question type from the first question if possible
+          let detectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null =
+            null;
+          if (part.questions.length > 0) {
+            detectedQuestionType = part.questions[0].q_type || "MP";
+          }
+
+          return {
+            ...part,
+            selectedQuestionType: detectedQuestionType,
+            // Move questions to the final questions array directly
+            questions: [...part.questions],
+            tempQuestions: [],
+          };
+        });
+
+        console.log(
+          "Updated parts after processing AI questions:",
+          updatedParts
+        );
+
+        // Update parts with processed questions
+        onPartsUpdate(updatedParts);
+
+        // Show a toast notification to inform the user
+        toast({
+          title: "AI-generated questions loaded",
+          description: "Questions from the PDF have been automatically loaded.",
+        });
+      }
+    }
+  }, [parts, onPartsUpdate, toast]);
+
+  // Modified to initialize tempQuestions when a question type is selected
   const handleTestTypeChange = (value: string) => {
     onTestTypeChange(value);
     let numParts = 1;
@@ -102,6 +171,43 @@ export function ModalCreateReadingDetail({
         selectedQuestionType: null,
       }))
     );
+  };
+
+  // Modified to properly initialize the tempQuestions array when selecting a question type
+  const handleQuestionTypeSelect = (
+    type: "MP" | "FB" | "MH" | "MF" | "TFNG"
+  ) => {
+    console.log(`Selected question type: ${type}`);
+
+    const updatedParts = parts.map((part) =>
+      part.part_num === activePart
+        ? {
+            ...part,
+            selectedQuestionType: type,
+            // Initialize tempQuestions as empty array if it's undefined
+            tempQuestions: part.tempQuestions || [],
+          }
+        : part
+    );
+
+    console.log("Updated parts after selecting question type:", updatedParts);
+    onPartsUpdate(updatedParts);
+
+    setCurrentQuestion({
+      q_type: type,
+      choices: type === "MP" ? [""] : undefined,
+      answers: [],
+      question: "",
+      start_passage: "",
+      end_passage: "",
+      heading: "",
+      options: type === "MH" || type === "MF" ? [""] : undefined,
+      paragraph_id: "",
+      feature: "",
+      sentence: "",
+    });
+
+    setEditingQuestionIndex(null);
   };
 
   // const handleMainImageChange = (
@@ -423,25 +529,178 @@ export function ModalCreateReadingDetail({
     }
   };
 
+  // Update the function to edit questions directly in the questions array
+  const handleEditExistingQuestion = (index: number) => {
+    // Get the question to edit from questions
+    const questionToEdit = parts.find((part) => part.part_num === activePart)
+      ?.questions[index];
+    if (questionToEdit) {
+      console.log(
+        `Editing existing question at index ${index}:`,
+        questionToEdit
+      );
+
+      // Set it as the current question for editing
+      setCurrentQuestion({ ...questionToEdit });
+
+      // Set the question type in the part and add to tempQuestions
+      const updatedParts = parts.map((part) =>
+        part.part_num === activePart
+          ? {
+              ...part,
+              selectedQuestionType: questionToEdit.q_type,
+              // Add to tempQuestions for tracking that we're editing
+              tempQuestions: [
+                ...part.tempQuestions,
+                { ...questionToEdit, _editingIndex: index },
+              ],
+            }
+          : part
+      );
+
+      console.log(
+        "Updated parts after setting up question for editing:",
+        updatedParts
+      );
+      onPartsUpdate(updatedParts);
+
+      // Store the index of the question being edited
+      setEditingQuestionIndex(index);
+
+      toast({
+        title: "Chỉnh sửa câu hỏi",
+        description:
+          "Bạn có thể chỉnh sửa câu hỏi và nhấn 'Thêm câu hỏi' để cập nhật.",
+      });
+    }
+  };
+
+  // Add a function to delete questions from the questions array
+  const handleDeleteExistingQuestion = (index: number) => {
+    console.log(`Deleting existing question at index ${index}`);
+
+    const updatedParts = parts.map((part) =>
+      part.part_num === activePart
+        ? {
+            ...part,
+            questions: part.questions.filter((_, i) => i !== index),
+          }
+        : part
+    );
+
+    console.log("Updated parts after deleting question:", updatedParts);
+    onPartsUpdate(updatedParts);
+    toast({
+      title: "Đã xóa câu hỏi",
+      description: "Câu hỏi đã được xóa khỏi danh sách.",
+    });
+  };
+
+  const handleSaveQuestions = () => {
+    console.log("Saving questions, current parts state:", parts);
+
+    const updatedParts = parts.map((part) => {
+      // Since we're now adding questions directly to the questions array,
+      // we just need to clear the tempQuestions array
+      return {
+        ...part,
+        tempQuestions: [],
+        selectedQuestionType: null,
+      };
+    });
+
+    console.log("Updated parts after saving questions:", updatedParts);
+
+    onPartsUpdate(updatedParts);
+    toast({
+      title: "Đã lưu câu hỏi",
+      description: "Tất cả câu hỏi đã được lưu thành công.",
+    });
+
+    if (dialogCloseRef.current) {
+      dialogCloseRef.current.click();
+    }
+  };
+
+  const hasQuestions =
+    (parts.find((part) => part.part_num === activePart)?.questions?.length ||
+      0) > 0 ||
+    (parts.find((part) => part.part_num === activePart)?.tempQuestions.length ||
+      0) > 0;
+
+  // Update the handleAddQuestion function to handle editing existing questions
   const handleAddQuestion = () => {
     const selectedQuestionType = parts.find(
       (part) => part.part_num === activePart
     )?.selectedQuestionType;
     if (!validateCurrentQuestion()) return;
+
+    console.log("Adding/updating question with type:", selectedQuestionType);
+    console.log("Current question data:", currentQuestion);
+    console.log("Editing index:", editingQuestionIndex);
+
     const newQuestion = { ...currentQuestion, q_type: selectedQuestionType! };
+
+    // Format the question based on its type for the final questions array
+    let formattedQuestion: Question;
+    if (selectedQuestionType === "MP") {
+      formattedQuestion = {
+        q_type: "MP",
+        question: newQuestion.question || "",
+        choices: newQuestion.choices || [],
+        answers: newQuestion.answers || [],
+      };
+    } else if (selectedQuestionType === "FB") {
+      formattedQuestion = {
+        q_type: "FB",
+        start_passage: newQuestion.start_passage || "",
+        end_passage: newQuestion.end_passage || "",
+        answers: newQuestion.answers || [],
+      };
+    } else if (selectedQuestionType === "MH") {
+      formattedQuestion = {
+        q_type: "MH",
+        heading: newQuestion.heading || "",
+        paragraph_id: newQuestion.paragraph_id || "",
+        options: newQuestion.options || [],
+        answer: newQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "MF") {
+      formattedQuestion = {
+        q_type: "MF",
+        feature: newQuestion.feature || "",
+        options: newQuestion.options || [],
+        answer: newQuestion.answer || "",
+      };
+    } else if (selectedQuestionType === "TFNG") {
+      formattedQuestion = {
+        q_type: "TFNG",
+        sentence: newQuestion.sentence || "",
+        answer: newQuestion.answer || "",
+      };
+    } else {
+      formattedQuestion = newQuestion; // Fallback
+    }
+
     const updatedParts = parts.map((part) =>
       part.part_num === activePart
         ? {
             ...part,
-            tempQuestions:
+            // Clear tempQuestions as we're done editing
+            tempQuestions: [],
+            // Update or add to questions array
+            questions:
               editingQuestionIndex !== null
-                ? part.tempQuestions.map((q, i) =>
-                    i === editingQuestionIndex ? newQuestion : q
+                ? part.questions.map((q, i) =>
+                    i === editingQuestionIndex ? formattedQuestion : q
                   )
-                : [...part.tempQuestions, newQuestion],
+                : [...part.questions, formattedQuestion],
           }
         : part
     );
+
+    console.log("Updated parts after adding/updating question:", updatedParts);
+
     onPartsUpdate(updatedParts);
     setCurrentQuestion({
       q_type: selectedQuestionType!,
@@ -471,110 +730,6 @@ export function ModalCreateReadingDetail({
           : "Câu hỏi mới đã được thêm vào danh sách.",
     });
   };
-
-  const handleEditQuestion = (index: number) => {
-    const questionToEdit = parts.find((part) => part.part_num === activePart)
-      ?.tempQuestions[index];
-    if (questionToEdit) {
-      setCurrentQuestion({ ...questionToEdit });
-      setEditingQuestionIndex(index);
-      const updatedParts = parts.map((part) =>
-        part.part_num === activePart
-          ? { ...part, selectedQuestionType: questionToEdit.q_type }
-          : part
-      );
-      onPartsUpdate(updatedParts);
-    }
-  };
-
-  const handleDeleteQuestion = (index: number) => {
-    const updatedParts = parts.map((part) =>
-      part.part_num === activePart
-        ? {
-            ...part,
-            tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
-          }
-        : part
-    );
-    onPartsUpdate(updatedParts);
-    toast({
-      title: "Đã xóa câu hỏi",
-      description: "Câu hỏi đã được xóa khỏi danh sách.",
-    });
-  };
-
-  const handleSaveQuestions = () => {
-    const updatedParts = parts.map((part) => {
-      if (part.tempQuestions.length === 0) {
-        return part;
-      }
-
-      const formattedQuestions: Question[] = part.tempQuestions.map(
-        (question) => {
-          if (question.q_type === "MP") {
-            return {
-              q_type: "MP",
-              question: question.question || "",
-              choices: question.choices || [],
-              answers: question.answers || [],
-            };
-          } else if (question.q_type === "FB") {
-            return {
-              q_type: "FB",
-              start_passage: question.start_passage || "",
-              end_passage: question.end_passage || "",
-              answers: question.answers || [],
-            };
-          } else if (question.q_type === "MH") {
-            return {
-              q_type: "MH",
-              heading: question.heading || "",
-              paragraph_id: question.paragraph_id || "",
-              options: question.options || [],
-              answer: question.answer || "",
-            };
-          } else if (question.q_type === "MF") {
-            return {
-              q_type: "MF",
-              feature: question.feature || "",
-              options: question.options || [],
-              answer: question.answer || "",
-            };
-          } else if (question.q_type === "TFNG") {
-            return {
-              q_type: "TFNG",
-              sentence: question.sentence || "",
-              answer: question.answer || "",
-            };
-          }
-          return question; // Fallback for other types or if q_type is missing
-        }
-      );
-
-      return {
-        ...part,
-        questions: [...part.questions, ...formattedQuestions],
-        tempQuestions: [],
-        selectedQuestionType: null,
-      };
-    });
-
-    onPartsUpdate(updatedParts);
-    toast({
-      title: "Đã lưu câu hỏi",
-      description: "Tất cả câu hỏi đã được lưu thành công.",
-    });
-
-    if (dialogCloseRef.current) {
-      dialogCloseRef.current.click();
-    }
-  };
-
-  const hasQuestions =
-    (parts.find((part) => part.part_num === activePart)?.questions?.length ||
-      0) > 0 ||
-    (parts.find((part) => part.part_num === activePart)?.tempQuestions.length ||
-      0) > 0;
 
   return (
     <Dialog>
@@ -663,27 +818,7 @@ export function ModalCreateReadingDetail({
                 <div className="mt-2">
                   <ModalChooseQuestion
                     onTypeSelected={(type) => {
-                      const updatedParts = parts.map((part) =>
-                        part.part_num === activePart
-                          ? { ...part, selectedQuestionType: type }
-                          : part
-                      );
-                      onPartsUpdate(updatedParts);
-                      setCurrentQuestion({
-                        q_type: type,
-                        choices: type === "MP" ? [""] : undefined,
-                        answers: [],
-                        question: "",
-                        start_passage: "",
-                        end_passage: "",
-                        heading: "",
-                        options:
-                          type === "MH" || type === "MF" ? [""] : undefined,
-                        paragraph_id: "",
-                        feature: "",
-                        sentence: "",
-                      });
-                      setEditingQuestionIndex(null);
+                      handleQuestionTypeSelect(type);
                     }}
                   />
                 </div>
@@ -1085,23 +1220,23 @@ export function ModalCreateReadingDetail({
                       )}
                     </button>
                     <div className="mt-4">
+                      {/* Show all questions in a single list */}
+                      <h3 className="font-bold text-lg mb-2">
+                        Danh sách câu hỏi
+                      </h3>
                       <QuestionList
                         questions={
+                          // Use only the questions array since we're now adding to both arrays
                           parts.find((part) => part.part_num === activePart)
-                            ?.tempQuestions || []
+                            ?.questions || []
                         }
-                        onEdit={handleEditQuestion}
-                        onDelete={handleDeleteQuestion}
+                        onEdit={handleEditExistingQuestion}
+                        onDelete={handleDeleteExistingQuestion}
                       />
                     </div>
                   </div>
                 )}
-                <QuestionList
-                  questions={
-                    parts.find((part) => part.part_num === activePart)
-                      ?.questions || []
-                  }
-                />
+                {/* Remove the commented out QuestionList component */}
               </div>
             </div>
           )}

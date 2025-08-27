@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UploadService } from "@/services/upload";
 import { Loader, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ReadingService } from "@/services/reading";
@@ -51,7 +51,28 @@ interface PartDetails {
   selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
-export function ModalCreateReading() {
+interface AIGeneratedData {
+  name?: string;
+  time?: number;
+  parts?: {
+    content: string;
+    questions: Question[];
+    part_num: number;
+  }[];
+  thumbnail?: string;
+}
+
+interface ModalCreateReadingProps {
+  aiData?: AIGeneratedData | null;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function ModalCreateReading({
+  aiData,
+  isOpen,
+  onOpenChange,
+}: ModalCreateReadingProps) {
   const { toast } = useToast();
 
   const mainImageInputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +85,7 @@ export function ModalCreateReading() {
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
   const [selectedTestType, setSelectedTestType] = useState<string>("");
+  const [open, setOpen] = useState<boolean>(false);
 
   const [parts, setParts] = useState<PartDetails[]>([
     {
@@ -91,6 +113,80 @@ export function ModalCreateReading() {
       selectedQuestionType: null,
     },
   ]);
+
+  // Effect to populate form with AI data when provided
+  useEffect(() => {
+    if (aiData) {
+      // Set name if available
+      if (aiData.name) {
+        setName(aiData.name);
+      }
+
+      // Set time if available
+      if (aiData.time) {
+        setTime(aiData.time);
+      }
+
+      // Set thumbnail if available
+      if (aiData.thumbnail) {
+        setMainPreview(aiData.thumbnail);
+      }
+
+      // Automatically set test type to "test-full" for AI-generated data
+      setSelectedTestType("test-full");
+    }
+  }, [aiData]);
+
+  // Effect to handle test type changes and initialize parts accordingly
+  useEffect(() => {
+    if (selectedTestType) {
+      let numParts = 1;
+      if (selectedTestType === "test-part-2") numParts = 2;
+      else if (selectedTestType === "test-full") numParts = 3;
+
+      // Create initial parts structure
+      const initialParts = Array.from({ length: numParts }, (_, i) => ({
+        image: "",
+        content: "",
+        part_num: i + 1,
+        questions: [] as Question[],
+        tempQuestions: [] as Question[],
+        selectedQuestionType: null,
+      }));
+
+      // If we have AI data, merge it with the initial parts
+      if (aiData && aiData.parts && aiData.parts.length > 0) {
+        aiData.parts.forEach((aiPart, index) => {
+          if (index < initialParts.length) {
+            initialParts[index] = {
+              ...initialParts[index],
+              content: aiPart.content || "",
+              questions: (aiPart.questions as Question[]) || [],
+              part_num: aiPart.part_num || index + 1,
+            };
+          }
+        });
+      }
+
+      // Update the parts state
+      setParts(initialParts);
+    }
+  }, [selectedTestType, aiData]);
+
+  // Handle open state from props
+  useEffect(() => {
+    if (isOpen !== undefined) {
+      setOpen(isOpen);
+    }
+  }, [isOpen]);
+
+  // Handle open state change
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (onOpenChange) {
+      onOpenChange(newOpen);
+    }
+  };
 
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
@@ -253,7 +349,7 @@ export function ModalCreateReading() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <button
           type="button"
