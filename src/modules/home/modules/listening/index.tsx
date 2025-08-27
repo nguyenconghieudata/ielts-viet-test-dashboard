@@ -10,6 +10,7 @@ import { ModalUpdateListening } from "./components/update/modal.update";
 import { ListeningService } from "@/services/listening";
 import { FileService } from "@/services/file";
 import { ReadingService } from "@/services/reading";
+import { ModalCreateListeningDetail } from "./components/create/modal.create.detail";
 
 interface AIGeneratedData {
   name?: string;
@@ -41,6 +42,9 @@ export default function Listening() {
   const [aiGeneratedData, setAiGeneratedData] =
     useState<AIGeneratedData | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [isCreateDetailModalOpen, setIsCreateDetailModalOpen] =
+    useState<boolean>(false);
+  const [aiFormattedOutput, setAiFormattedOutput] = useState<any>(null);
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -321,6 +325,7 @@ export default function Listening() {
         }
 
         console.log("========= formatted output", formattedOutput);
+        setAiFormattedOutput(formattedOutput);
 
         // If we successfully parsed the JSON but it's still not in the right format,
         // try to extract the relevant data
@@ -333,6 +338,7 @@ export default function Listening() {
             try {
               const nestedJson = JSON.parse(formattedOutput.outputUrl);
               formattedOutput = nestedJson;
+              setAiFormattedOutput(nestedJson);
             } catch (nestedError) {
               // If nested parsing fails, keep the original parsed object
               console.warn(
@@ -370,6 +376,11 @@ export default function Listening() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // Function to open the create detail modal with AI generated data
+  const openCreateDetailModal = () => {
+    setIsCreateDetailModalOpen(true);
   };
 
   const init = async () => {
@@ -410,7 +421,12 @@ export default function Listening() {
             </h5>
           </div>
           <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-            <ModalCreateListening />
+            <ModalCreateListening
+              isOpen={isCreateModalOpen}
+              onOpenChange={setIsCreateModalOpen}
+              aiGeneratedData={aiGeneratedData}
+              aiFormattedOutput={aiFormattedOutput}
+            />
             <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
               <button
                 type="button"

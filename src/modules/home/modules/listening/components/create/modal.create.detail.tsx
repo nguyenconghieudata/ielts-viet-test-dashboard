@@ -14,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader, Plus, Upload, X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import ProductDescriptionEditor from "../quill";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
@@ -65,6 +65,7 @@ interface ModalCreateListeningDetailProps {
   onPartsUpdate: (updatedParts: PartDetails[]) => void;
   selectedTestType: string;
   onTestTypeChange: (value: string) => void;
+  aiFormattedOutput?: any;
 }
 
 export function ModalCreateListeningDetail({
@@ -72,10 +73,12 @@ export function ModalCreateListeningDetail({
   onPartsUpdate,
   selectedTestType,
   onTestTypeChange,
+  aiFormattedOutput,
 }: ModalCreateListeningDetailProps) {
   const { toast } = useToast();
   const audioInputRef = useRef<HTMLInputElement>(null);
   const dialogCloseRef = useRef<HTMLButtonElement>(null);
+  const dataProcessedRef = useRef<boolean>(false);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAudioLoading, setIsAudioLoading] = useState<boolean>(false);
@@ -90,6 +93,156 @@ export function ModalCreateListeningDetail({
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<
     number | null
   >(null);
+
+  // Effect to populate questions from AI generated data when available
+  useEffect(() => {
+    // Skip if no data or already processed
+    if (!aiFormattedOutput || !parts || dataProcessedRef.current) {
+      return;
+    }
+
+    // Try to extract questions from different possible formats in the AI output
+    let aiParts: any[] = [];
+
+    if (
+      aiFormattedOutput.passages &&
+      Array.isArray(aiFormattedOutput.passages)
+    ) {
+      aiParts = aiFormattedOutput.passages;
+    } else if (
+      aiFormattedOutput.parts &&
+      Array.isArray(aiFormattedOutput.parts)
+    ) {
+      aiParts = aiFormattedOutput.parts;
+    } else if (
+      aiFormattedOutput.sections &&
+      Array.isArray(aiFormattedOutput.sections)
+    ) {
+      aiParts = aiFormattedOutput.sections;
+    }
+
+    // If we found parts with questions, update our parts
+    if (aiParts.length > 0) {
+      // Check if we already have questions in tempQuestions
+      const hasExistingQuestions = parts.some(
+        (part) => part.tempQuestions && part.tempQuestions.length > 0
+      );
+
+      if (!hasExistingQuestions) {
+        const updatedParts = [...parts];
+        let hasChanges = false;
+
+        // For each part we have, try to find corresponding AI part and extract questions
+        for (let i = 0; i < updatedParts.length && i < aiParts.length; i++) {
+          const aiPart = aiParts[i];
+          const questions = aiPart.questions || [];
+
+          // Format the questions to match our expected format
+          const formattedQuestions = formatQuestionsFromAI(questions);
+
+          if (formattedQuestions.length > 0) {
+            // Update the part with the formatted questions
+            updatedParts[i] = {
+              ...updatedParts[i],
+              tempQuestions: formattedQuestions,
+            };
+            hasChanges = true;
+          }
+        }
+
+        if (hasChanges) {
+          onPartsUpdate(updatedParts);
+        }
+      }
+
+      // Mark as processed to prevent infinite loops
+      dataProcessedRef.current = true;
+    }
+  }, [aiFormattedOutput]);
+
+  // Helper function to format questions from AI output to our expected format
+  const formatQuestionsFromAI = (questions: any[]): Question[] => {
+    if (!Array.isArray(questions)) return [];
+
+    return questions.map((q) => {
+      // Try to determine the question type
+      let questionType = q.q_type || q.type || "MP"; // Default to multiple choice
+
+      // Normalize question type to expected format
+      if (
+        questionType.toUpperCase().includes("MULTIPLE") ||
+        questionType.toUpperCase().includes("MC")
+      ) {
+        questionType = "MP";
+      } else if (
+        questionType.toUpperCase().includes("FILL") ||
+        questionType.toUpperCase().includes("FB")
+      ) {
+        questionType = "FB";
+      } else if (
+        questionType.toUpperCase().includes("HEADING") ||
+        questionType.toUpperCase().includes("MH")
+      ) {
+        questionType = "MH";
+      } else if (
+        questionType.toUpperCase().includes("FEATURE") ||
+        questionType.toUpperCase().includes("MF")
+      ) {
+        questionType = "MF";
+      } else if (
+        questionType.toUpperCase().includes("TRUE") ||
+        questionType.toUpperCase().includes("TFNG")
+      ) {
+        questionType = "TFNG";
+      }
+
+      // Format the question based on its type
+      switch (questionType) {
+        case "MP":
+          return {
+            q_type: "MP",
+            question: q.question || q.text || "",
+            choices: q.choices || q.options || [],
+            answers: q.answers || (q.answer ? [q.answer] : []),
+          };
+        case "FB":
+          return {
+            q_type: "FB",
+            start_passage: q.start_passage || q.start || "",
+            end_passage: q.end_passage || q.end || "",
+            answers: q.answers || (q.answer ? [q.answer] : []),
+          };
+        case "MH":
+          return {
+            q_type: "MH",
+            heading: q.heading || "",
+            paragraph_id: q.paragraph_id || q.paragraph || "",
+            options: q.options || [],
+            answer: q.answer || "",
+          };
+        case "MF":
+          return {
+            q_type: "MF",
+            feature: q.feature || "",
+            options: q.options || [],
+            answer: q.answer || "",
+          };
+        case "TFNG":
+          return {
+            q_type: "TFNG",
+            sentence: q.sentence || q.text || "",
+            answer: q.answer || "",
+          };
+        default:
+          return {
+            q_type: "MP",
+            question: q.question || "",
+            choices: q.choices || [],
+            answers: q.answers || [],
+          };
+      }
+    });
+  };
 
   // const handleMainImageChange = (
   //   event: React.ChangeEvent<HTMLInputElement>

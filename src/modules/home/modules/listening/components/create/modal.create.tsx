@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UploadService } from "@/services/upload";
 import { Loader, Plus, Upload, X } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ListeningService } from "@/services/listening";
@@ -53,7 +53,30 @@ interface PartDetails {
   selectedQuestionType: "MP" | "FB" | "MH" | "MF" | "TFNG" | null;
 }
 
-export function ModalCreateListening() {
+interface AIGeneratedData {
+  name?: string;
+  time?: number;
+  parts?: {
+    content: string;
+    questions: any[];
+    part_num: number;
+  }[];
+  thumbnail?: string;
+}
+
+interface ModalCreateListeningProps {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  aiGeneratedData?: AIGeneratedData | null;
+  aiFormattedOutput?: any;
+}
+
+export function ModalCreateListening({
+  isOpen = false,
+  onOpenChange,
+  aiGeneratedData,
+  aiFormattedOutput,
+}: ModalCreateListeningProps) {
   const { toast } = useToast();
 
   const mainImageInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +125,49 @@ export function ModalCreateListening() {
   ]);
 
   const [selectedTestType, setSelectedTestType] = useState<string>("");
+
+  // Effect to populate form with AI generated data when available
+  useEffect(() => {
+    if (aiGeneratedData) {
+      // Set name and time from AI data
+      if (aiGeneratedData.name) setName(aiGeneratedData.name);
+      if (aiGeneratedData.time) setTime(aiGeneratedData.time);
+
+      // If we have parts data, update the parts state
+      if (aiGeneratedData.parts && aiGeneratedData.parts.length > 0) {
+        // Determine how many parts we need
+        const numParts = aiGeneratedData.parts.length;
+        setSelectedTestType(
+          numParts === 1
+            ? "test-part-1"
+            : numParts === 2
+            ? "test-part-2"
+            : numParts === 3
+            ? "test-part-3"
+            : "test-full"
+        );
+
+        // Create updated parts with questions from AI data
+        const updatedParts = Array.from({ length: numParts }, (_, i) => {
+          const aiPart = aiGeneratedData.parts?.[i];
+
+          // Map the AI questions to the expected format
+          const questions = aiPart?.questions || [];
+
+          return {
+            image: "",
+            audio: "",
+            part_num: i + 1,
+            questions: [],
+            tempQuestions: questions,
+            selectedQuestionType: null,
+          };
+        });
+
+        setParts(updatedParts);
+      }
+    }
+  }, [aiGeneratedData]);
 
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
@@ -268,7 +334,7 @@ export function ModalCreateListening() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <button
           type="button"
@@ -384,6 +450,7 @@ export function ModalCreateListening() {
                   onPartsUpdate={handlePartsUpdate}
                   selectedTestType={selectedTestType}
                   onTestTypeChange={handleTestTypeChange}
+                  aiFormattedOutput={aiFormattedOutput}
                 />
               </div>
             </div>
