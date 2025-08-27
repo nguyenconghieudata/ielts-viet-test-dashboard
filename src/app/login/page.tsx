@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
 import LoginClient from "@/modules/login";
-import { Suspense } from 'react';
+import { Suspense } from "react";
 
 export default function Login() {
   return (
@@ -13,3 +13,4 @@ export default function Login() {
   );
 }
 
+// ahahahahh
