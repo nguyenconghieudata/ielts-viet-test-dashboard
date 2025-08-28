@@ -169,6 +169,65 @@ export function ModalCreateListening({
     }
   }, [aiGeneratedData]);
 
+  // Function to add a new question to a specific part
+  const addNewQuestionToPart = (
+    partNum: number,
+    questionType: "MP" | "FB" | "MH" | "MF" | "TFNG"
+  ) => {
+    const updatedParts = [...parts];
+    const partIndex = updatedParts.findIndex(
+      (part) => part.part_num === partNum
+    );
+
+    if (partIndex !== -1) {
+      // Set the selected question type for the part
+      updatedParts[partIndex].selectedQuestionType = questionType;
+
+      setParts(updatedParts);
+    }
+  };
+
+  // Function to add a new part
+  const handleAddPart = () => {
+    if (parts.length >= 4) {
+      toast({
+        variant: "destructive",
+        title: "Số lượng phần tối đa",
+        description: "Bạn đã đạt đến số lượng phần tối đa (4 phần).",
+      });
+      return;
+    }
+
+    const newPartNum = parts.length + 1;
+    const newPart: PartDetails = {
+      image: "",
+      audio: "",
+      part_num: newPartNum,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    };
+
+    setParts([...parts, newPart]);
+
+    // Update test type based on new number of parts
+    const newTestType =
+      newPartNum === 1
+        ? "test-part-1"
+        : newPartNum === 2
+        ? "test-part-2"
+        : newPartNum === 3
+        ? "test-part-3"
+        : "test-full";
+
+    setSelectedTestType(newTestType);
+
+    toast({
+      title: "Đã thêm phần mới",
+      description: `Phần ${newPartNum} đã được thêm vào bài nghe.`,
+    });
+  };
+
   const handlePartsUpdate = (updatedParts: PartDetails[]) => {
     setParts(updatedParts);
   };

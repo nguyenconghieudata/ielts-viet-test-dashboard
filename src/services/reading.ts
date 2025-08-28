@@ -103,8 +103,6 @@ const createReadingFileAi = async (payload: any) => {
     myHeaders.append("Content-Type", "application/json");
     console.log("Making request to:", API.READING_FILE_AI);
 
-    return outputUrl;
-
     const response = await fetch(API.READING_FILE_AI, {
       method: "POST",
       headers: myHeaders,

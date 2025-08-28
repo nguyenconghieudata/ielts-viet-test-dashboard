@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import { Edit, Trash2 } from "lucide-react";
 
 interface Question {
   q_type: "MP" | "FB" | "MH" | "MF" | "TFNG";
@@ -44,7 +45,7 @@ export function QuestionList({
             {questions.map((question, index) => (
               <div
                 key={index}
-                className="border rounded-lg p-4 bg-gray-50 shadow-sm"
+                className="border rounded-lg p-4 bg-gray-50 shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex justify-between items-center">
                   <h3 className="text-md font-medium text-indigo-600">
@@ -68,17 +69,19 @@ export function QuestionList({
                       {onEdit && (
                         <button
                           onClick={() => onEdit(index)}
-                          className="text-indigo-600 hover:text-indigo-800 font-medium"
+                          className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-indigo-50"
                         >
-                          Sửa
+                          <Edit size={16} />
+                          <span>Sửa</span>
                         </button>
                       )}
                       {onDelete && (
                         <button
                           onClick={() => onDelete(index)}
-                          className="text-red-600 hover:text-red-800 font-medium"
+                          className="text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50"
                         >
-                          Xóa
+                          <Trash2 size={16} />
+                          <span>Xóa</span>
                         </button>
                       )}
                     </div>
@@ -110,6 +113,14 @@ export function QuestionList({
                           "Chưa có lựa chọn"
                         )}
                       </p>
+                      <p>
+                        <strong>Đáp án:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answers?.length
+                            ? question.answers.join(", ")
+                            : "Chưa có đáp án"}
+                        </span>
+                      </p>
                     </>
                   ) : question.q_type === "FB" ? (
                     <>
@@ -123,9 +134,11 @@ export function QuestionList({
                       </p>
                       <p>
                         <strong>Đáp án:</strong>{" "}
-                        {question.answers?.length
-                          ? question.answers.join(", ")
-                          : "Chưa có đáp án"}
+                        <span className="text-green-600">
+                          {question.answers?.length
+                            ? question.answers.join(", ")
+                            : "Chưa có đáp án"}
+                        </span>
                       </p>
                     </>
                   ) : question.q_type === "MH" ? (
@@ -157,6 +170,12 @@ export function QuestionList({
                           "Chưa có options"
                         )}
                       </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answer || "Chưa có đáp án"}
+                        </span>
+                      </p>
                     </>
                   ) : question.q_type === "MF" ? (
                     <>
@@ -182,6 +201,12 @@ export function QuestionList({
                         ) : (
                           "Chưa có options"
                         )}
+                      </p>
+                      <p>
+                        <strong>Answer:</strong>{" "}
+                        <span className="text-green-600">
+                          {question.answer || "Chưa có đáp án"}
+                        </span>
                       </p>
                     </>
                   ) : (

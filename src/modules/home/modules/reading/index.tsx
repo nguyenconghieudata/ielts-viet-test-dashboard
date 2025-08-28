@@ -266,11 +266,13 @@ export default function Reading() {
         content: fileData.file_content,
       };
 
-      console.log(body);
+      console.log("========= body", body);
 
       const outputUrl = await ReadingService.createReadingFileAi(
         JSON.stringify(body)
       );
+
+      console.log("========= outputUrl", outputUrl);
 
       // Format outputUrl to correct JSON form
       let formattedOutput;

@@ -97,52 +97,71 @@ export default function Listening() {
           outputUrl.title ||
           outputUrl.name ||
           outputUrl.reading_title ||
-          "New Reading Test";
+          outputUrl.listening_title ||
+          "New Listening Test";
 
         // Extract time from various possible formats
         formattedData.time =
-          outputUrl.time || outputUrl.duration || outputUrl.reading_time || 60;
+          outputUrl.time ||
+          outputUrl.duration ||
+          outputUrl.reading_time ||
+          outputUrl.listening_time ||
+          60;
 
         // Process parts based on different possible structures
+        let extractedParts: any[] = [];
+
         if (outputUrl.passages && Array.isArray(outputUrl.passages)) {
           // Format: { passages: [{ text, questions }] }
-          formattedData.parts = outputUrl.passages.map(
-            (passage: any, index: number) => ({
-              content: passage.text || passage.content || "",
-              part_num: passage.part_num || index + 1,
-              questions: formatQuestions(passage.questions || []),
-            })
-          );
+          extractedParts = outputUrl.passages;
         } else if (outputUrl.parts && Array.isArray(outputUrl.parts)) {
           // Format: { parts: [{ content, questions }] }
-          formattedData.parts = outputUrl.parts.map(
-            (part: any, index: number) => ({
-              content: part.content || part.text || "",
-              part_num: part.part_num || index + 1,
-              questions: formatQuestions(part.questions || []),
-            })
-          );
+          extractedParts = outputUrl.parts;
         } else if (outputUrl.sections && Array.isArray(outputUrl.sections)) {
           // Format: { sections: [{ content, questions }] }
-          formattedData.parts = outputUrl.sections.map(
-            (section: any, index: number) => ({
-              content: section.content || section.text || "",
-              part_num: section.part_num || index + 1,
-              questions: formatQuestions(section.questions || []),
-            })
-          );
+          extractedParts = outputUrl.sections;
         } else if (outputUrl.content || outputUrl.text) {
           // Single passage format
-          formattedData.parts = [
+          extractedParts = [
             {
               content: outputUrl.content || outputUrl.text || "",
+              questions: outputUrl.questions || [],
               part_num: 1,
-              questions: formatQuestions(outputUrl.questions || []),
+            },
+          ];
+        }
+
+        // Format the extracted parts
+        formattedData.parts = extractedParts.map((part: any, index: number) => {
+          // Get content from various possible fields
+          const content = part.content || part.text || "";
+
+          // Get part number from the part or use index + 1
+          const partNum = part.part_num || part.part || index + 1;
+
+          // Get questions and format them
+          const questions = formatQuestions(part.questions || []);
+
+          return {
+            content,
+            part_num: partNum,
+            questions,
+          };
+        });
+
+        // Ensure we have at least one part
+        if (formattedData.parts.length === 0) {
+          formattedData.parts = [
+            {
+              content: "",
+              part_num: 1,
+              questions: [],
             },
           ];
         }
       }
 
+      console.log("Formatted AI data:", formattedData);
       return formattedData;
     } catch (error) {
       console.error("Error parsing AI response:", error);

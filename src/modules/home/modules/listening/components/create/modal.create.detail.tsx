@@ -346,20 +346,46 @@ export function ModalCreateListeningDetail({
   //   return new File([u8arr], "image.png", { type: mime });
   // };
 
-  // const handleAddPart = () => {
-  //   const updatedParts = [
-  //     ...parts,
-  //     {
-  //       image: "",
-  //       content: "",
-  //       part_num: parts.length + 1,
-  //       questions: [],
-  //       tempQuestions: [],
-  //       selectedQuestionType: null,
-  //     },
-  //   ];
-  //   onPartsUpdate(updatedParts);
-  // };
+  const handleAddPart = () => {
+    if (parts.length >= 4) {
+      toast({
+        variant: "destructive",
+        title: "Số lượng phần tối đa",
+        description: "Bạn đã đạt đến số lượng phần tối đa (4 phần).",
+      });
+      return;
+    }
+
+    const newPartNum = parts.length + 1;
+    const newPart: PartDetails = {
+      image: "",
+      audio: "",
+      part_num: newPartNum,
+      questions: [],
+      tempQuestions: [],
+      selectedQuestionType: null,
+    };
+
+    const updatedParts = [...parts, newPart];
+    onPartsUpdate(updatedParts);
+
+    // Update test type based on new number of parts
+    const newTestType =
+      newPartNum === 1
+        ? "test-part-1"
+        : newPartNum === 2
+        ? "test-part-2"
+        : newPartNum === 3
+        ? "test-part-3"
+        : "test-full";
+
+    onTestTypeChange(newTestType);
+
+    toast({
+      title: "Đã thêm phần mới",
+      description: `Phần ${newPartNum} đã được thêm vào bài nghe.`,
+    });
+  };
 
   // Ensure content is updated for the active passage and log for debugging
 
@@ -681,16 +707,28 @@ export function ModalCreateListeningDetail({
       audio: currentPart?.audio || "",
     };
 
-    const updatedParts = parts.map((part) =>
-      part.part_num === activePart
-        ? {
+    const updatedParts = parts.map((part) => {
+      if (part.part_num === activePart) {
+        if (editingQuestionIndex !== null) {
+          // Update existing question
+          const updatedTempQuestions = [...part.tempQuestions];
+          updatedTempQuestions[editingQuestionIndex] = questionWithFields;
+
+          return {
+            ...part,
+            tempQuestions: updatedTempQuestions,
+          };
+        } else {
+          // Add new question
+          return {
             ...part,
             questions: [...part.questions, questionWithFields],
             tempQuestions: [...part.tempQuestions, questionWithFields],
-            // Keep the question form visible by not resetting selectedQuestionType
-          }
-        : part
-    );
+          };
+        }
+      }
+      return part;
+    });
 
     onPartsUpdate(updatedParts);
 
@@ -713,9 +751,18 @@ export function ModalCreateListeningDetail({
       answer: "",
     });
 
+    // Reset editing index after saving
+    setEditingQuestionIndex(null);
+
     toast({
-      title: "Câu hỏi đã được thêm",
-      description: "Câu hỏi mới đã được thêm vào danh sách.",
+      title:
+        editingQuestionIndex !== null
+          ? "Câu hỏi đã được cập nhật"
+          : "Câu hỏi đã được thêm",
+      description:
+        editingQuestionIndex !== null
+          ? "Câu hỏi đã được cập nhật thành công."
+          : "Câu hỏi mới đã được thêm vào danh sách.",
     });
   };
 
@@ -726,12 +773,27 @@ export function ModalCreateListeningDetail({
       // Preserve all fields including part_num, image, and audio
       setCurrentQuestion({ ...questionToEdit });
       setEditingQuestionIndex(index);
+
+      // Update the selected question type in the parts array
       const updatedParts = parts.map((part) =>
         part.part_num === activePart
           ? { ...part, selectedQuestionType: questionToEdit.q_type }
           : part
       );
       onPartsUpdate(updatedParts);
+
+      // Scroll to the question form
+      setTimeout(() => {
+        const questionForm = document.querySelector(".question-form-section");
+        if (questionForm) {
+          questionForm.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+
+      toast({
+        title: "Chỉnh sửa câu hỏi",
+        description: `Đang chỉnh sửa câu hỏi ${index + 1}`,
+      });
     }
   };
 
@@ -741,10 +803,30 @@ export function ModalCreateListeningDetail({
         ? {
             ...part,
             tempQuestions: part.tempQuestions.filter((_, i) => i !== index),
+            // Also remove from the questions array if it exists there
+            questions: part.questions.filter((q, i) => {
+              // If the question is in both arrays at the same index, remove it
+              // This is a simple approach; for more complex scenarios, you might need a unique ID
+              if (i < part.tempQuestions.length && i === index) {
+                return false;
+              }
+              return true;
+            }),
           }
         : part
     );
     onPartsUpdate(updatedParts);
+
+    // If we're currently editing this question, reset the editing state
+    if (editingQuestionIndex === index) {
+      setEditingQuestionIndex(null);
+      setCurrentQuestion({
+        q_type: "MP",
+        choices: [""],
+        answers: [],
+      });
+    }
+
     toast({
       title: "Đã xóa câu hỏi",
       description: "Câu hỏi đã được xóa khỏi danh sách.",
@@ -905,6 +987,14 @@ export function ModalCreateListeningDetail({
                       Passage {part.part_num}
                     </button>
                   ))}
+                  {parts.length < 4 && (
+                    <button
+                      onClick={handleAddPart}
+                      className="border border-dashed border-indigo-400 rounded-xl px-5 py-1 flex items-center justify-center text-indigo-600 hover:bg-indigo-50"
+                    >
+                      <Plus size={16} className="mr-1" /> Thêm phần
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -994,8 +1084,12 @@ export function ModalCreateListeningDetail({
                   {/* Question Form Section */}
                   {parts.find((part) => part.part_num === activePart)
                     ?.selectedQuestionType && (
-                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4 border-b pb-6 mb-6">
-                      <h3 className="text-lg font-bold">Thêm câu hỏi mới</h3>
+                    <div className="col-span-3 w-full flex flex-col gap-4 mt-4 border-b pb-6 mb-6 question-form-section">
+                      <h3 className="text-lg font-bold">
+                        {editingQuestionIndex !== null
+                          ? `Chỉnh sửa câu hỏi ${editingQuestionIndex + 1}`
+                          : "Thêm câu hỏi mới"}
+                      </h3>
                       {parts.find((part) => part.part_num === activePart)
                         ?.selectedQuestionType === "MP" && (
                         <div className="flex flex-col gap-4">
@@ -1388,7 +1482,7 @@ export function ModalCreateListeningDetail({
                         className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
                       >
                         {editingQuestionIndex !== null ? (
-                          <>Cập nhật câu hỏi {editingQuestionIndex + 1} </>
+                          <>Cập nhật câu hỏi</>
                         ) : (
                           <>
                             <Plus /> Thêm câu hỏi
