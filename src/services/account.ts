@@ -9,7 +9,7 @@ const getAll = async () => {
       throw new Error(`Failed - Status: ${response.status}`);
     }
     const data = await response.json();
-    console.log("========= Get All Accounts:", data);
+    // console.log("========= Get All Accounts:", data);
 
     return data.data;
   } catch (error: any) {

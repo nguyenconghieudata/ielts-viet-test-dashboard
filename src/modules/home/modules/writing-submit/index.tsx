@@ -107,7 +107,7 @@ export default function WritingSubmit() {
                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
                   <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400">
                     <tr>
-                      <th scope="col" className="w-64 px-4 py-3">
+                      <th scope="col" className="w-56 px-4 py-3">
                         Tên người nộp
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
@@ -118,6 +118,12 @@ export default function WritingSubmit() {
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
                         Thời gian nộp
+                      </th>
+                      <th scope="col" className="w-24 px-4 py-3">
+                        Tình trạng
+                      </th>
+                      <th scope="col" className="w-24 px-4 py-3">
+                        Overall
                       </th>
                       <th scope="col" className="w-24 px-4 py-3">
                         Chi tiết
@@ -134,22 +140,37 @@ export default function WritingSubmit() {
                           <Image
                             src={item?.user_avatar || IMAGES.BLANK_ACC}
                             alt="img"
-                            className="w-20 h-20 rounded-full object-cover col-span-3 border border-gray-300"
+                            className="w-16 h-16 rounded-full object-cover col-span-4 border border-gray-300"
                             width={100}
                             height={100}
                           />
-                          <span className="w-full col-span-9 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
+                          <span className="w-full col-span-8 text-[14px] line-clamp-2 bg-primary-100 text-gray-900 font-medium py-0.5 rounded dark:bg-primary-900 dark:text-primary-300">
                             {item?.user_name ? item?.user_name : "Khách"}
                           </span>
                         </td>
                         <td className="w-32 px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {item?.user_email}
                         </td>
-                        <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <td className="w-32 px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {item?.test_name}
                         </td>
-                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <td className="w-24 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.score ? (
+                            <span className="text-green-500">Đã chấm</span>
+                          ) : (
+                            <span className="text-red-500">Chưa chấm</span>
+                          )}
+                        </td>
+
+                        <td className="w-24 text-[14px] px-5 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {HELPER.formatDate(item?.created_at)}
+                        </td>
+                        <td className="w-24 px-8 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {item?.score ? (
+                            <span className="">{item?.score}</span>
+                          ) : (
+                            <span className="">0.0</span>
+                          )}
                         </td>
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           <ModalUpdateReading data={item} />
