@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { ROUTES, isApiRoute } from "./utils/route";
 
 export function middleware(req: NextRequest) {
-  // Skip middleware for API routes completely
+  // Skip middleware for API routes completely re-deploy
   if (isApiRoute(req.nextUrl.pathname)) {
     return NextResponse.next();
   }
