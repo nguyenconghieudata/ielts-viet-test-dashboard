@@ -1,5 +1,5 @@
-// const BASE_URL = "https://api.farmcode.io.vn/v1";
-const BASE_URL = "http://localhost:8000/v1";
+const BASE_URL = "https://api.farmcode.io.vn/v1";
+// const BASE_URL = "http://localhost:8000/v1";
 
 // Determine if we're in a production environment
 const isProduction = process.env.NODE_ENV === "production";
