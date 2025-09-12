@@ -352,6 +352,7 @@ export function ModalCreateFullTest() {
       let writingTestData: TestData | null = null;
       if (wId) {
         const resW = await WritingService.getWritingById(wId);
+
         if (resW) {
           const writingParts = await Promise.all(
             resW.parts.map(async (partId: string) => {
@@ -372,6 +373,8 @@ export function ModalCreateFullTest() {
             parts: writingParts,
           };
 
+          console.log("check writing data: ", writingTestData);
+
           // Construct writingSubmitFormat
           const writingPartsFormatted = writingParts.map(
             (partResponse, index) => {
@@ -386,6 +389,18 @@ export function ModalCreateFullTest() {
               }
             }
           );
+
+          // console.log("check writing data 2----: ", writingPartsFormatted);
+
+          const test = {
+            skill: "W",
+            parts:
+              writingPartsFormatted.length > 0 ? writingPartsFormatted : [{}],
+            name: resW.name || "",
+            time: resW.time || 60,
+          };
+
+          // console.log("check writing data 3----: ", test);
 
           setWritingSubmitFormat({
             skill: "W",
@@ -606,9 +621,13 @@ export function ModalCreateFullTest() {
         };
       };
 
+      console.log("check writing test: ", writingSubmitFormat);
+
       const processedReadingFormat = processTestData(readingSubmitFormat);
       const processedListeningFormat = processTestData(listeningSubmitFormat);
       const processedWritingFormat = processTestData(writingSubmitFormat);
+
+      console.log("check processedWritingFormat: ", processedWritingFormat);
 
       const body = {
         name,
@@ -623,9 +642,11 @@ export function ModalCreateFullTest() {
         ],
       };
 
-      console.log("BODY", body);
+      // console.log("BODY", JSON.stringify(body));
 
       const response = await FullTestService.createFullTest(body);
+
+      console.log("check response: ", response);
 
       if (response) {
         toast({
@@ -686,9 +707,9 @@ export function ModalCreateFullTest() {
             >
               Ghép bài test
             </button>
-            <button className={`border rounded-xl px-5 py-1 text-black`}>
+            {/* <button className={`border rounded-xl px-5 py-1 text-black`}>
               Tạo Full Test
-            </button>
+            </button> */}
           </div>
         </div>
         <div className="w-full grid grid-cols-3 gap-8">

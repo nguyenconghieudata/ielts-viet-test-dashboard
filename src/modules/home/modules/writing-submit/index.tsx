@@ -117,10 +117,10 @@ export default function WritingSubmit() {
                         Bài viết
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        Thời gian nộp
+                        Tình trạng
                       </th>
                       <th scope="col" className="w-24 px-4 py-3">
-                        Tình trạng
+                        Thời gian nộp
                       </th>
                       <th scope="col" className="w-24 px-4 py-3">
                         Overall
