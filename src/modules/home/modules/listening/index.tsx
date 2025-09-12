@@ -12,6 +12,7 @@ import { FileService } from "@/services/file";
 import { ReadingService } from "@/services/reading";
 import { ModalCreateListeningDetail } from "./components/create/modal.create.detail";
 
+// */*
 interface AIGeneratedData {
   name?: string;
   time?: number;
@@ -446,7 +447,7 @@ export default function Listening() {
               aiGeneratedData={aiGeneratedData}
               aiFormattedOutput={aiFormattedOutput}
             />
-            <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
+            {/* <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
               <button
                 type="button"
                 onClick={handleUploadFile}
@@ -469,9 +470,9 @@ export default function Listening() {
                 type="file"
                 onChange={handleFileChange}
                 className="hidden"
-                accept="*/*"
+                accept=""
               />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">
