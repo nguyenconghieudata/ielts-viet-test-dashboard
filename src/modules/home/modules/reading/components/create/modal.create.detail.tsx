@@ -14,12 +14,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader, Plus, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ProductDescriptionEditor from "../quill";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ModalChooseQuestion } from "../modal.choose.question";
 import { QuestionList } from "./question-list";
+import { UploadService } from "@/services/upload";
 import {
   Select,
   SelectContent,
@@ -261,56 +262,64 @@ export function ModalCreateReadingDetail({
   //   return true;
   // };
 
-  // const handleImageUpload = useCallback(async (file: File) => {
-  //   const formData = new FormData();
-  //   formData.append("file", file);
-  //   try {
-  //     const uploadResponse = await UploadService.uploadToCloudinary([file]);
-  //     return uploadResponse &&
-  //       Array.isArray(uploadResponse) &&
-  //       uploadResponse[0]
-  //       ? uploadResponse[0]?.secure_url
-  //       : "";
-  //   } catch (error) {
-  //     console.error("Image upload failed:", error);
-  //     return "";
-  //   }
-  // }, []);
+  // Uncomment and modify the image upload functions
+  const handleImageUpload = useCallback(async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const uploadResponse = await UploadService.uploadToCloudinary([file]);
+      if (
+        uploadResponse &&
+        Array.isArray(uploadResponse) &&
+        uploadResponse[0]
+      ) {
+        return uploadResponse[0]?.secure_url;
+      } else {
+        console.error("Upload failed or response is not as expected");
+        return "";
+      }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      return "";
+    }
+  }, []);
 
-  // const extractBase64Images = (htmlContent: string) => {
-  //   const imgTagRegex =
-  //     /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-  //   return [...htmlContent.matchAll(imgTagRegex)].map((match) => match[1]);
-  // };
+  const extractBase64Images = (htmlContent: string) => {
+    const imgTagRegex =
+      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+    return [...htmlContent.matchAll(imgTagRegex)].map((match) => match[1]);
+  };
 
-  // const replaceBase64WithCloudUrls = async (
-  //   htmlContent: string,
-  //   uploadFunc: (file: File) => Promise<string>
-  // ) => {
-  //   const imgTagRegex =
-  //     /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
-  //   let updatedContent = htmlContent;
-  //   const matches = [...htmlContent.matchAll(imgTagRegex)];
-  //   for (const match of matches) {
-  //     const base64String = match[1];
-  //     const file = base64ToFile(base64String);
-  //     const uploadedUrl = await uploadFunc(file);
-  //     updatedContent = updatedContent.replace(base64String, uploadedUrl);
-  //   }
-  //   return updatedContent;
-  // };
+  const replaceBase64WithCloudUrls = async (
+    htmlContent: string,
+    uploadFunc: (file: File) => Promise<string>
+  ) => {
+    const imgTagRegex =
+      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+    let updatedContent = htmlContent;
 
-  // const base64ToFile = (base64String: string): File => {
-  //   const arr = base64String.split(",");
-  //   const mime = arr[0].match(/:(.*?);/)?.[1];
-  //   const bstr = atob(arr[1]);
-  //   let n = bstr.length;
-  //   const u8arr = new Uint8Array(n);
-  //   while (n--) {
-  //     u8arr[n] = bstr.charCodeAt(n);
-  //   }
-  //   return new File([u8arr], "image.png", { type: mime });
-  // };
+    const matches = [...htmlContent.matchAll(imgTagRegex)];
+    for (const match of matches) {
+      const base64String = match[1];
+      const file = base64ToFile(base64String);
+      const uploadedUrl = await uploadFunc(file);
+      updatedContent = updatedContent.replace(base64String, uploadedUrl);
+    }
+
+    return updatedContent;
+  };
+
+  const base64ToFile = (base64String: string): File => {
+    const arr = base64String.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], "image.png", { type: mime });
+  };
 
   // const handleAddPart = () => {
   //   const updatedParts = [
@@ -596,29 +605,61 @@ export function ModalCreateReadingDetail({
     });
   };
 
-  const handleSaveQuestions = () => {
+  const handleSaveQuestions = async () => {
     console.log("Saving questions, current parts state:", parts);
+    setIsLoading(true);
 
-    const updatedParts = parts.map((part) => {
-      // Since we're now adding questions directly to the questions array,
-      // we just need to clear the tempQuestions array
-      return {
-        ...part,
-        tempQuestions: [],
-        selectedQuestionType: null,
-      };
-    });
+    try {
+      // Process each part sequentially to upload any base64 images
+      const processedParts = [];
 
-    console.log("Updated parts after saving questions:", updatedParts);
+      for (const part of parts) {
+        // Check if the content has base64 images that need to be uploaded
+        const hasBase64Images = extractBase64Images(part.content).length > 0;
 
-    onPartsUpdate(updatedParts);
-    toast({
-      title: "Đã lưu câu hỏi",
-      description: "Tất cả câu hỏi đã được lưu thành công.",
-    });
+        if (hasBase64Images) {
+          // Upload base64 images to cloud
+          const updatedContent = await replaceBase64WithCloudUrls(
+            part.content,
+            handleImageUpload
+          );
 
-    if (dialogCloseRef.current) {
-      dialogCloseRef.current.click();
+          processedParts.push({
+            ...part,
+            content: updatedContent, // Update with cloud URLs
+            tempQuestions: [],
+            selectedQuestionType: null,
+          });
+        } else {
+          // No images to process
+          processedParts.push({
+            ...part,
+            tempQuestions: [],
+            selectedQuestionType: null,
+          });
+        }
+      }
+
+      console.log("Updated parts after saving questions:", processedParts);
+      onPartsUpdate(processedParts);
+
+      toast({
+        title: "Đã lưu câu hỏi",
+        description: "Tất cả câu hỏi đã được lưu thành công.",
+      });
+
+      if (dialogCloseRef.current) {
+        dialogCloseRef.current.click();
+      }
+    } catch (error) {
+      console.error("Error saving questions:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi khi lưu câu hỏi",
+        description: "Đã xảy ra lỗi khi lưu câu hỏi. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 

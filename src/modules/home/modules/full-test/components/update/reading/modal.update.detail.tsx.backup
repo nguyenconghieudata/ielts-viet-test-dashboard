@@ -394,14 +394,14 @@ export function ModalUpdateReadingDetail({
     });
 
     toast({
-      title: editingQuestionIndex !== null ? "Câu hỏi đã được cập nhật" : "Câu hỏi đã được thêm",
-      description: editingQuestionIndex !== null ? "Câu hỏi đã được cập nhật thành công." : "Câu hỏi mới đã được thêm vào danh sách.",
+      title: "Câu hỏi đã được thêm",
+      description: "Câu hỏi mới đã được thêm vào danh sách.",
     });
   };
 
   const handleEditQuestion = (index: number) => {
     const questionToEdit = parts.find((part) => part.part_num === activePart)
-      ?.tempQuestions[index];
+      ?.question[index];
     if (questionToEdit) {
       setCurrentQuestion(questionToEdit);
       setEditingQuestionIndex(index);
@@ -460,7 +460,7 @@ export function ModalUpdateReadingDetail({
               choices: question.choices || [],
               answer: question.answer || [],
             };
-          } else if (question.q_type === "FB") {
+          } else {
             return {
               _id: question._id || "",
               part_id: question.part_id || "",
@@ -469,35 +469,7 @@ export function ModalUpdateReadingDetail({
               end_passage: question.end_passage || "",
               answer: question.answer || [],
             };
-          } else if (question.q_type === "MH") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "MH",
-              heading: question.heading || "",
-              paragraph_id: question.paragraph_id || "",
-              options: question.options || [],
-              answer: question.answer || "",
-            };
-          } else if (question.q_type === "MF") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "MF",
-              feature: question.feature || "",
-              options: question.options || [],
-              answer: question.answer || "",
-            };
-          } else if (question.q_type === "TFNG") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "TFNG",
-              sentence: question.sentence || "",
-              answer: question.answer || "",
-            };
           }
-          return question;
         }
       );
 
@@ -674,208 +646,6 @@ export function ModalUpdateReadingDetail({
                       />
                     </div>
                   )}
-                  {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "MH" && (
-                    <div className="flex flex-col gap-4">
-                      <div className="font-bold text-lg">MATCHING HEADINGS</div>
-                      <Label className="text-[14.5px]">Heading</Label>
-                      <input
-                        value={currentQuestion.heading || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            heading: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập heading"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Paragraph ID</Label>
-                      <input
-                        value={currentQuestion.paragraph_id || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            paragraph_id: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập paragraph ID"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Options</Label>
-                      {currentQuestion.options?.map((option, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <input
-                            value={option}
-                            onChange={(e) => {
-                              const updatedOptions = [...(currentQuestion.options || [])];
-                              updatedOptions[index] = e.target.value;
-                              setCurrentQuestion({
-                                ...currentQuestion,
-                                options: updatedOptions,
-                              });
-                            }}
-                            placeholder={`Option ${index + 1}`}
-                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
-                          />
-                          <button
-                            onClick={() => {
-                              const updatedOptions = currentQuestion.options?.filter((_, i) => i !== index) || [];
-                              setCurrentQuestion({
-                                ...currentQuestion,
-                                options: updatedOptions,
-                              });
-                            }}
-                            className="bg-red-500 text-white p-2 rounded-full"
-                            disabled={currentQuestion.options?.length === 1}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => {
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            options: [...(currentQuestion.options || []), ""],
-                          });
-                        }}
-                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
-                      >
-                        <Plus />
-                      </button>
-                      <Label className="text-[14.5px]">Đáp án</Label>
-                      <select
-                        value={currentQuestion.answer || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            answer: e.target.value,
-                          })
-                        }
-                        className="p-2 border border-[#CFCFCF] rounded focus:border-gray-500"
-                      >
-                        <option value="">Chọn đáp án</option>
-                        {currentQuestion.options?.map((option, index) => (
-                          <option key={index} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "MF" && (
-                    <div className="flex flex-col gap-4">
-                      <div className="font-bold text-lg">MATCHING FEATURES</div>
-                      <Label className="text-[14.5px]">Feature</Label>
-                      <input
-                        value={currentQuestion.feature || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            feature: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập feature"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Options</Label>
-                      {currentQuestion.options?.map((option, index) => (
-                        <div key={index} className="flex items-center gap-4">
-                          <input
-                            value={option}
-                            onChange={(e) => {
-                              const updatedOptions = [...(currentQuestion.options || [])];
-                              updatedOptions[index] = e.target.value;
-                              setCurrentQuestion({
-                                ...currentQuestion,
-                                options: updatedOptions,
-                              });
-                            }}
-                            placeholder={`Option ${index + 1}`}
-                            className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500 flex-1"
-                          />
-                          <button
-                            onClick={() => {
-                              const updatedOptions = currentQuestion.options?.filter((_, i) => i !== index) || [];
-                              setCurrentQuestion({
-                                ...currentQuestion,
-                                options: updatedOptions,
-                              });
-                            }}
-                            className="bg-red-500 text-white p-2 rounded-full"
-                            disabled={currentQuestion.options?.length === 1}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => {
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            options: [...(currentQuestion.options || []), ""],
-                          });
-                        }}
-                        className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-full text-sm !text-[16px] text-center w-[40px]"
-                      >
-                        <Plus />
-                      </button>
-                      <Label className="text-[14.5px]">Đáp án</Label>
-                      <select
-                        value={currentQuestion.answer || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            answer: e.target.value,
-                          })
-                        }
-                        className="p-2 border border-[#CFCFCF] rounded focus:border-gray-500"
-                      >
-                        <option value="">Chọn đáp án</option>
-                        {currentQuestion.options?.map((option, index) => (
-                          <option key={index} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {parts.find((part) => part.part_num === activePart)
-                    ?.selectedQuestionType === "TFNG" && (
-                    <div className="flex flex-col gap-4">
-                      <div className="font-bold text-lg">TRUE/FALSE/NOT GIVEN</div>
-                      <Label className="text-[14.5px]">Câu phát biểu</Label>
-                      <input
-                        value={currentQuestion.sentence || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            sentence: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập câu phát biểu"
-                        className="p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                      />
-                      <Label className="text-[14.5px]">Đáp án</Label>
-                      <select
-                        value={currentQuestion.answer || ""}
-                        onChange={(e) =>
-                          setCurrentQuestion({
-                            ...currentQuestion,
-                            answer: e.target.value,
-                          })
-                        }
-                        className="p-2 border border-[#CFCFCF] rounded focus:border-gray-500"
-                      >
-                        <option value="">Chọn đáp án</option>
-                        <option value="TRUE">TRUE</option>
-                        <option value="FALSE">FALSE</option>
-                        <option value="NOT GIVEN">NOT GIVEN</option>
-                      </select>
-                    </div>
-                  )}
                   <button
                     onClick={handleAddQuestion}
                     className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
@@ -893,7 +663,7 @@ export function ModalUpdateReadingDetail({
               <QuestionList
                 questions={
                   parts.find((part) => part.part_num === activePart)
-                    ?.tempQuestions || []
+                    ?.question || []
                 }
                 onEdit={handleEditQuestion}
                 onDelete={handleDeleteQuestion}

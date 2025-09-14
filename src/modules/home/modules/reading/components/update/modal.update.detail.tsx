@@ -14,12 +14,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader, Plus, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import ProductDescriptionEditor from "../quill";
 import "@/styles/scroll-hiding.css";
 import "@/styles/placeholder.css";
 import { ModalChooseQuestion } from "../modal.choose.question";
 import { QuestionList } from "./question-list";
+import { UploadService } from "@/services/upload";
 
 interface Question {
   _id: string;
@@ -79,6 +80,8 @@ export function ModalUpdateReadingDetail({
     const updatedParts = parts.map((part) =>
       part.part_num === activePart ? { ...part, content } : part
     );
+
+    console.log("updatedParts", updatedParts);
     onPartsUpdate(updatedParts);
   };
 
@@ -482,89 +485,162 @@ export function ModalUpdateReadingDetail({
     });
   };
 
-  const handleSaveQuestions = () => {
-    const updatedParts = parts.map((part) => {
-      if (part.tempQuestions.length === 0) {
-        return part;
+  const handleImageUpload = useCallback(async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const uploadResponse = await UploadService.uploadToCloudinary([file]);
+      if (
+        uploadResponse &&
+        Array.isArray(uploadResponse) &&
+        uploadResponse[0]
+      ) {
+        return uploadResponse[0]?.secure_url;
+      } else {
+        console.error("Upload failed or response is not as expected");
+        return "";
+      }
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      return "";
+    }
+  }, []);
+
+  const replaceBase64WithCloudUrls = async (
+    htmlContent: string,
+    uploadFunc: (file: File) => Promise<string>
+  ) => {
+    const imgTagRegex =
+      /<img[^>]+src=["'](data:image\/[^;]+;base64[^"']+)["'][^>]*>/g;
+    let updatedContent = htmlContent;
+
+    const matches = [...htmlContent.matchAll(imgTagRegex)];
+    for (const match of matches) {
+      const base64String = match[1];
+      const file = base64ToFile(base64String);
+      const uploadedUrl = await uploadFunc(file);
+      updatedContent = updatedContent.replace(base64String, uploadedUrl);
+    }
+
+    return updatedContent;
+  };
+
+  const base64ToFile = (base64String: string): File => {
+    const arr = base64String.split(",");
+    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], "image.png", { type: mime });
+  };
+
+  const handleSaveQuestions = async () => {
+    setIsLoading(true);
+    try {
+      // Process each part sequentially
+      const processedParts = [];
+
+      for (const part of parts) {
+        if (part.tempQuestions.length === 0) {
+          processedParts.push(part);
+          continue;
+        }
+
+        // Upload any base64 images in content to cloud
+        const updatedContent = await replaceBase64WithCloudUrls(
+          part.content,
+          handleImageUpload
+        );
+
+        const formattedQuestions: Question[] = part.tempQuestions.map(
+          (question) => {
+            if (question.q_type === "MP") {
+              return {
+                _id: question._id || "",
+                part_id: question.part_id || "",
+                q_type: "MP",
+                question: question.question || "",
+                choices: question.choices || [],
+                answer: Array.isArray(question.answer) ? question.answer : [],
+              };
+            } else if (question.q_type === "FB") {
+              return {
+                _id: question._id || "",
+                part_id: question.part_id || "",
+                q_type: "FB",
+                start_passage: question.start_passage || "",
+                end_passage: question.end_passage || "",
+                answer: Array.isArray(question.answer)
+                  ? question.answer
+                  : [question.answer || ""],
+              };
+            } else if (question.q_type === "MH") {
+              return {
+                _id: question._id || "",
+                part_id: question.part_id || "",
+                q_type: "MH",
+                heading: question.heading || "",
+                paragraph_id: question.paragraph_id || "",
+                options: question.options || [],
+                answer:
+                  typeof question.answer === "string" ? question.answer : "",
+              };
+            } else if (question.q_type === "MF") {
+              return {
+                _id: question._id || "",
+                part_id: question.part_id || "",
+                q_type: "MF",
+                feature: question.feature || "",
+                options: question.options || [],
+                answer:
+                  typeof question.answer === "string" ? question.answer : "",
+              };
+            } else if (question.q_type === "TFNG") {
+              return {
+                _id: question._id || "",
+                part_id: question.part_id || "",
+                q_type: "TFNG",
+                sentence: question.sentence || "",
+                answer:
+                  typeof question.answer === "string" ? question.answer : "",
+              };
+            } else {
+              return question;
+            }
+          }
+        );
+
+        processedParts.push({
+          ...part,
+          content: updatedContent, // Update with the processed content
+          question: formattedQuestions,
+          tempQuestions: [],
+          selectedQuestionType: null,
+        });
       }
 
-      const formattedQuestions: Question[] = part.tempQuestions.map(
-        (question) => {
-          if (question.q_type === "MP") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "MP",
-              question: question.question || "",
-              choices: question.choices || [],
-              answer: Array.isArray(question.answer) ? question.answer : [],
-            };
-          } else if (question.q_type === "FB") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "FB",
-              start_passage: question.start_passage || "",
-              end_passage: question.end_passage || "",
-              answer: Array.isArray(question.answer)
-                ? question.answer
-                : [question.answer || ""],
-            };
-          } else if (question.q_type === "MH") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "MH",
-              heading: question.heading || "",
-              paragraph_id: question.paragraph_id || "",
-              options: question.options || [],
-              answer:
-                typeof question.answer === "string" ? question.answer : "",
-            };
-          } else if (question.q_type === "MF") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "MF",
-              feature: question.feature || "",
-              options: question.options || [],
-              answer:
-                typeof question.answer === "string" ? question.answer : "",
-            };
-          } else if (question.q_type === "TFNG") {
-            return {
-              _id: question._id || "",
-              part_id: question.part_id || "",
-              q_type: "TFNG",
-              sentence: question.sentence || "",
-              answer:
-                typeof question.answer === "string" ? question.answer : "",
-            };
-          } else {
-            return question;
-          }
-        }
-      );
+      onPartsUpdate(processedParts);
 
-      return {
-        ...part,
-        question: formattedQuestions, // Replace old question list with new tempQuestions
-        tempQuestions: [],
-        selectedQuestionType: null,
-      };
-    });
+      toast({
+        title: "Đã lưu câu hỏi",
+        description: "Tất cả câu hỏi đã được lưu thành công.",
+      });
 
-    onPartsUpdate(updatedParts);
-
-    console.log("Updated parts:", updatedParts);
-
-    toast({
-      title: "Đã lưu câu hỏi",
-      description: "Tất cả câu hỏi đã được lưu thành công.",
-    });
-
-    if (dialogCloseRef.current) {
-      dialogCloseRef.current.click();
+      if (dialogCloseRef.current) {
+        dialogCloseRef.current.click();
+      }
+    } catch (error) {
+      console.error("Error saving questions:", error);
+      toast({
+        variant: "destructive",
+        title: "Lỗi khi lưu câu hỏi",
+        description: "Đã xảy ra lỗi khi lưu câu hỏi. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
