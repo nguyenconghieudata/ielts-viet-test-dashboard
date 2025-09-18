@@ -700,9 +700,13 @@ export function ModalUpdateReadingDetail({
                   />
                 </div>
               </div>
+              <div id="question-update"></div>
               {parts.find((part) => part.part_num === activePart)
                 ?.selectedQuestionType && (
-                <div className="col-span-3 w-full flex flex-col gap-4 mt-4">
+                <div
+                  id="question-update"
+                  className="col-span-3 w-full flex flex-col gap-4 mt-4"
+                >
                   {parts.find((part) => part.part_num === activePart)
                     ?.selectedQuestionType === "MP" && (
                     <div className="flex flex-col gap-4">
@@ -1098,7 +1102,9 @@ export function ModalUpdateReadingDetail({
                     </div>
                   )}
                   <button
-                    onClick={handleAddQuestion}
+                    onClick={() => {
+                      handleAddQuestion();
+                    }}
                     className="p-2 flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-sm !text-[16px] text-center"
                   >
                     {editingQuestionIndex !== null ? (

@@ -378,7 +378,7 @@ export default function Reading() {
       setIsLoading(true);
       const res = await ReadingService.getAll();
       if (res && res?.data?.length > 0) {
-        render(res.data);
+        render(res?.data);
       } else {
         setData([]);
         setCurrenData([]);
@@ -416,7 +416,7 @@ export default function Reading() {
               isOpen={isCreateModalOpen}
               onOpenChange={setIsCreateModalOpen}
             />
-            {/* <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
+            <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
               <button
                 type="button"
                 onClick={handleUploadFile}
@@ -441,7 +441,7 @@ export default function Reading() {
                 className="hidden"
                 accept=""
               />
-            </div> */}
+            </div>
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">
@@ -468,14 +468,11 @@ export default function Reading() {
                         Passage
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
-                        Câu hỏi
+                        Thời gian
                       </th>
-                      <th scope="col" className="w-32 px-4 py-3">
-                        Thời gian làm bài
-                      </th>
-                      <th scope="col" className="w-32 px-4 py-3">
+                      {/* <th scope="col" className="w-32 px-4 py-3">
                         Đã làm
-                      </th>
+                      </th> */}
                       <th scope="col" className="w-24 px-4 py-3">
                         Chi tiết
                       </th>
@@ -503,14 +500,11 @@ export default function Reading() {
                           {item.parts.length} phần
                         </td>
                         <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {item.number_of_questions} câu
-                        </td>
-                        <td className="w-32 px-14 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {item.time} phút
                         </td>
-                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        {/* <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
-                        </td>
+                        </td> */}
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           <ModalUpdateReading data={item} />
                         </td>

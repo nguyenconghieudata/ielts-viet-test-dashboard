@@ -2,17 +2,16 @@
 "use client";
 
 import Image from "next/image";
-import { ModalCreateListening } from "./components/create/modal.create";
+import { ModalCreateReading } from "./components/create/modal.create";
 import { useEffect, useRef, useState } from "react";
+import { ReadingService } from "@/services/reading";
 import { FileUp, Loader } from "lucide-react";
 import { IMAGES } from "@/utils/image";
-import { ModalUpdateListening } from "./components/update/modal.update";
-import { ListeningService } from "@/services/listening";
+import { ModalUpdateReading } from "./components/update/modal.update";
 import { FileService } from "@/services/file";
-import { ReadingService } from "@/services/reading";
-import { ModalCreateListeningDetail } from "./components/create/modal.create.detail";
 
 // */*
+// Define interface for AI generated data
 interface AIGeneratedData {
   name?: string;
   time?: number;
@@ -24,7 +23,7 @@ interface AIGeneratedData {
   thumbnail?: string;
 }
 
-export default function Listening() {
+export default function Reading() {
   const COUNT = 5;
 
   const [data, setData] = useState([]);
@@ -43,9 +42,6 @@ export default function Listening() {
   const [aiGeneratedData, setAiGeneratedData] =
     useState<AIGeneratedData | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
-  const [isCreateDetailModalOpen, setIsCreateDetailModalOpen] =
-    useState<boolean>(false);
-  const [aiFormattedOutput, setAiFormattedOutput] = useState<any>(null);
 
   const selectPage = (pageSelected: any) => {
     setCurrenPage(pageSelected);
@@ -98,71 +94,52 @@ export default function Listening() {
           outputUrl.title ||
           outputUrl.name ||
           outputUrl.reading_title ||
-          outputUrl.listening_title ||
-          "New Listening Test";
+          "New Reading Test";
 
         // Extract time from various possible formats
         formattedData.time =
-          outputUrl.time ||
-          outputUrl.duration ||
-          outputUrl.reading_time ||
-          outputUrl.listening_time ||
-          60;
+          outputUrl.time || outputUrl.duration || outputUrl.reading_time || 60;
 
         // Process parts based on different possible structures
-        let extractedParts: any[] = [];
-
         if (outputUrl.passages && Array.isArray(outputUrl.passages)) {
           // Format: { passages: [{ text, questions }] }
-          extractedParts = outputUrl.passages;
+          formattedData.parts = outputUrl.passages.map(
+            (passage: any, index: number) => ({
+              content: passage.text || passage.content || "",
+              part_num: passage.part_num || index + 1,
+              questions: formatQuestions(passage.questions || []),
+            })
+          );
         } else if (outputUrl.parts && Array.isArray(outputUrl.parts)) {
           // Format: { parts: [{ content, questions }] }
-          extractedParts = outputUrl.parts;
+          formattedData.parts = outputUrl.parts.map(
+            (part: any, index: number) => ({
+              content: part.content || part.text || "",
+              part_num: part.part_num || index + 1,
+              questions: formatQuestions(part.questions || []),
+            })
+          );
         } else if (outputUrl.sections && Array.isArray(outputUrl.sections)) {
           // Format: { sections: [{ content, questions }] }
-          extractedParts = outputUrl.sections;
+          formattedData.parts = outputUrl.sections.map(
+            (section: any, index: number) => ({
+              content: section.content || section.text || "",
+              part_num: section.part_num || index + 1,
+              questions: formatQuestions(section.questions || []),
+            })
+          );
         } else if (outputUrl.content || outputUrl.text) {
           // Single passage format
-          extractedParts = [
-            {
-              content: outputUrl.content || outputUrl.text || "",
-              questions: outputUrl.questions || [],
-              part_num: 1,
-            },
-          ];
-        }
-
-        // Format the extracted parts
-        formattedData.parts = extractedParts.map((part: any, index: number) => {
-          // Get content from various possible fields
-          const content = part.content || part.text || "";
-
-          // Get part number from the part or use index + 1
-          const partNum = part.part_num || part.part || index + 1;
-
-          // Get questions and format them
-          const questions = formatQuestions(part.questions || []);
-
-          return {
-            content,
-            part_num: partNum,
-            questions,
-          };
-        });
-
-        // Ensure we have at least one part
-        if (formattedData.parts.length === 0) {
           formattedData.parts = [
             {
-              content: "",
+              content: outputUrl.content || outputUrl.text || "",
               part_num: 1,
-              questions: [],
+              questions: formatQuestions(outputUrl.questions || []),
             },
           ];
         }
       }
 
-      console.log("Formatted AI data:", formattedData);
       return formattedData;
     } catch (error) {
       console.error("Error parsing AI response:", error);
@@ -286,7 +263,7 @@ export default function Listening() {
 
       // console.log("Processing file with AI...");
       const body = {
-        test_type: "L",
+        test_type: "R",
         content: fileData.file_content,
       };
 
@@ -345,7 +322,6 @@ export default function Listening() {
         }
 
         console.log("========= formatted output", formattedOutput);
-        setAiFormattedOutput(formattedOutput);
 
         // If we successfully parsed the JSON but it's still not in the right format,
         // try to extract the relevant data
@@ -358,7 +334,6 @@ export default function Listening() {
             try {
               const nestedJson = JSON.parse(formattedOutput.outputUrl);
               formattedOutput = nestedJson;
-              setAiFormattedOutput(nestedJson);
             } catch (nestedError) {
               // If nested parsing fails, keep the original parsed object
               console.warn(
@@ -398,15 +373,10 @@ export default function Listening() {
     }
   };
 
-  // Function to open the create detail modal with AI generated data
-  const openCreateDetailModal = () => {
-    setIsCreateDetailModalOpen(true);
-  };
-
   const init = async () => {
     try {
       setIsLoading(true);
-      const res = await ListeningService.getAll();
+      const res = await ReadingService.getAll();
       if (res && res?.data?.length > 0) {
         render(res?.data);
       } else {
@@ -415,7 +385,7 @@ export default function Listening() {
         setQuestionCounts({});
       }
     } catch (error) {
-      console.error("Failed to fetch listening:", error);
+      console.error("Failed to fetch readings:", error);
       setData([]);
       setCurrenData([]);
       setQuestionCounts({});
@@ -435,26 +405,18 @@ export default function Listening() {
           <div className="flex items-center flex-1">
             <h5>
               <span className="text-gray-800 text-[20px] font-bold">
-                DANH SÁCH BÀI NGHE{" "}
+                DANH SÁCH BÀI ĐỌC{" "}
                 <span className="text-indigo-600">({data?.length})</span>
               </span>
             </h5>
           </div>
           <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-            <ModalCreateListening
+            <ModalCreateReading
+              aiData={aiGeneratedData}
               isOpen={isCreateModalOpen}
               onOpenChange={setIsCreateModalOpen}
-              aiGeneratedData={aiGeneratedData}
-              aiFormattedOutput={aiFormattedOutput}
             />
             <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-              {/* <button
-                type="button"
-                onClick={sortDataByName}
-                className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-md px-5 py-2 text-center"
-              >
-                Sắp xếp theo tên {sortOrder === "asc" ? "↑" : "↓"}
-              </button> */}
               <button
                 type="button"
                 onClick={handleUploadFile}
@@ -500,7 +462,7 @@ export default function Listening() {
                   <thead className="text-md text-gray-700 uppercase bg-gray-50 border dark:bg-gray-700 dark:text-gray-400">
                     <tr>
                       <th scope="col" className="w-64 px-4 py-3">
-                        Tên bài nghe
+                        Tên bài đọc
                       </th>
                       <th scope="col" className="w-32 px-4 py-3">
                         Passage
@@ -508,9 +470,9 @@ export default function Listening() {
                       <th scope="col" className="w-32 px-4 py-3">
                         Thời gian
                       </th>
-                      {/* <th scope="col" className="w-32 px-4 py-3">
+                      <th scope="col" className="w-32 px-4 py-3">
                         Đã làm
-                      </th> */}
+                      </th>
                       <th scope="col" className="w-24 px-4 py-3">
                         Chi tiết
                       </th>
@@ -540,11 +502,11 @@ export default function Listening() {
                         <td className="w-32 px-6 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {item.time} phút
                         </td>
-                        {/* <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
-                        </td> */}
+                        </td>
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          <ModalUpdateListening data={item} />
+                          <ModalUpdateReading data={item} />
                         </td>
                       </tr>
                     ))}

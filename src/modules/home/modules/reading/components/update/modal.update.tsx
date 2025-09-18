@@ -71,10 +71,12 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLoadingDOM, setIsLoadingDOM] = useState<boolean>(true);
+  const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(true);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [time, setTime] = useState<number>(0);
   const [isLoadingForDelete, setIsLoadingForDelete] = useState<boolean>(false);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   const [parts, setParts] = useState<PartDetails[]>([]);
 
@@ -252,86 +254,105 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
 
   const updateDOM = async (readingData: ReadingData) => {
     if (readingData) {
+      setIsLoadingDetails(true);
       setName(readingData.name);
       setTime(readingData.time);
       setMainPreview(readingData.thumbnail);
 
-      // Dynamically fetch all parts based on the actual data
-      const partsPromises = readingData.parts.map(async (partId: string) => {
-        return await QuestionsService.getQuestionsById(partId);
-      });
+      try {
+        // Dynamically fetch all parts based on the actual data
+        const partsPromises = readingData.parts.map(async (partId: string) => {
+          return await QuestionsService.getQuestionsById(partId);
+        });
 
-      const partsData = await Promise.all(partsPromises);
+        const partsData = await Promise.all(partsPromises);
 
-      // Create parts array dynamically based on actual data
-      const updatedParts: PartDetails[] = partsData.map((partData, index) => ({
-        _id: partData._id,
-        image: partData.image || "",
-        content: partData.content || "",
-        part_num: index + 1,
-        question: (partData.question || []).map((q: any) => {
-          // Handle different question types
-          let formattedAnswer;
-          if (q.q_type === "MP") {
-            formattedAnswer = q.answer || q.answers || [];
-          } else if (
-            q.q_type === "MH" ||
-            q.q_type === "MF" ||
-            q.q_type === "TFNG"
-          ) {
-            // For these types, answer should be a string
-            formattedAnswer = Array.isArray(q.answer) ? q.answer[0] : q.answer;
-            if (
-              Array.isArray(q.answers) &&
-              q.answers.length > 0 &&
-              !formattedAnswer
-            ) {
-              formattedAnswer = q.answers[0];
-            }
-          } else {
-            // Default for FB and other types
-            formattedAnswer = q.answer || q.answers || [];
-          }
+        // Create parts array dynamically based on actual data
+        const updatedParts: PartDetails[] = partsData.map(
+          (partData, index) => ({
+            _id: partData._id,
+            image: partData.image || "",
+            content: partData.content || "",
+            part_num: index + 1,
+            question: (partData.question || []).map((q: any) => {
+              // Handle different question types
+              let formattedAnswer;
+              if (q.q_type === "MP") {
+                formattedAnswer = q.answer || q.answers || [];
+              } else if (
+                q.q_type === "MH" ||
+                q.q_type === "MF" ||
+                q.q_type === "TFNG"
+              ) {
+                // For these types, answer should be a string
+                formattedAnswer = Array.isArray(q.answer)
+                  ? q.answer[0]
+                  : q.answer;
+                if (
+                  Array.isArray(q.answers) &&
+                  q.answers.length > 0 &&
+                  !formattedAnswer
+                ) {
+                  formattedAnswer = q.answers[0];
+                }
+              } else {
+                // Default for FB and other types
+                formattedAnswer = q.answer || q.answers || [];
+              }
 
-          return {
-            ...q,
-            answer: formattedAnswer,
-          };
-        }),
-        tempQuestions: (partData.question || []).map((q: any) => {
-          // Handle different question types
-          let formattedAnswer;
-          if (q.q_type === "MP") {
-            formattedAnswer = q.answer || q.answers || [];
-          } else if (
-            q.q_type === "MH" ||
-            q.q_type === "MF" ||
-            q.q_type === "TFNG"
-          ) {
-            // For these types, answer should be a string
-            formattedAnswer = Array.isArray(q.answer) ? q.answer[0] : q.answer;
-            if (
-              Array.isArray(q.answers) &&
-              q.answers.length > 0 &&
-              !formattedAnswer
-            ) {
-              formattedAnswer = q.answers[0];
-            }
-          } else {
-            // Default for FB and other types
-            formattedAnswer = q.answer || q.answers || [];
-          }
+              return {
+                ...q,
+                answer: formattedAnswer,
+              };
+            }),
+            tempQuestions: (partData.question || []).map((q: any) => {
+              // Handle different question types
+              let formattedAnswer;
+              if (q.q_type === "MP") {
+                formattedAnswer = q.answer || q.answers || [];
+              } else if (
+                q.q_type === "MH" ||
+                q.q_type === "MF" ||
+                q.q_type === "TFNG"
+              ) {
+                // For these types, answer should be a string
+                formattedAnswer = Array.isArray(q.answer)
+                  ? q.answer[0]
+                  : q.answer;
+                if (
+                  Array.isArray(q.answers) &&
+                  q.answers.length > 0 &&
+                  !formattedAnswer
+                ) {
+                  formattedAnswer = q.answers[0];
+                }
+              } else {
+                // Default for FB and other types
+                formattedAnswer = q.answer || q.answers || [];
+              }
 
-          return {
-            ...q,
-            answer: formattedAnswer,
-          };
-        }),
-        selectedQuestionType: null,
-      }));
+              return {
+                ...q,
+                answer: formattedAnswer,
+              };
+            }),
+            selectedQuestionType: null,
+          })
+        );
 
-      setParts(updatedParts);
-      setIsLoadingDOM(false);
+        setParts(updatedParts);
+      } catch (error) {
+        console.error("Error loading reading details:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi khi tải dữ liệu",
+          description:
+            "Đã xảy ra lỗi khi tải chi tiết bài đọc. Vui lòng thử lại sau.",
+        });
+      } finally {
+        setIsLoadingDOM(false);
+        setIsLoadingDetails(false);
+      }
     }
   };
 
@@ -340,7 +361,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
   }, [data]);
 
   return (
-    <Dialog>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         {isLoadingDOM ? (
           <div className="px-5 text-center pointer-events-none">
@@ -350,6 +371,7 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
           <button
             type="button"
             className="mx-3 flex items-center justify-center text-black hover:text-white hover:bg-indigo-700 font-medium rounded-full text-sm p-2 text-center"
+            onClick={() => setIsDialogOpen(true)}
           >
             <SquarePen />
           </button>
@@ -371,131 +393,150 @@ export function ModalUpdateReading({ data }: { data: ReadingData }) {
             </span>
           </DialogDescription>
         </DialogHeader>
-        <div className="w-full grid grid-cols-3 gap-8">
-          <div className="col-span-1">
-            <div className="overflow-y-auto max-h-[70vh] scroll-bar-style">
-              <div className="mb-6">
-                <Label htmlFor="thumbnail" className="text-right !text-[16px]">
-                  Hình chính
-                </Label>
-                <div className="mt-2">
-                  {!mainPreview && (
-                    <div
-                      onClick={handleUpdateMainImage}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white px-5 py-16 text-sm font-medium text-gray-900 hover:bg-gray-50 hover:text-primary-700 cursor-pointer"
+        {isLoadingDetails ? (
+          <div className="flex justify-center items-center h-[50vh]">
+            <div className="flex flex-col items-center">
+              <Loader className="animate-spin text-indigo-600 mb-4" size={40} />
+              <p className="text-gray-600">
+                Đang tải dữ liệu chi tiết bài đọc...
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="w-full grid grid-cols-3 gap-8">
+              <div className="col-span-1">
+                <div className="overflow-y-auto max-h-[70vh] scroll-bar-style">
+                  <div className="mb-6">
+                    <Label
+                      htmlFor="thumbnail"
+                      className="text-right !text-[16px]"
                     >
-                      <div className="flex flex-col items-center">
-                        <span>+ Tải hình lên</span>
-                        <span className="text-xs text-gray-500">
-                          hoặc kéo thả file vào đây
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    ref={mainImageInputRef}
-                    onChange={handleMainImageChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  {mainPreview && (
+                      Hình chính
+                    </Label>
                     <div className="mt-2">
-                      <div className="relative group w-full h-80">
-                        <div className="absolute top-0 left-0 right-0 bottom-0 group-hover:bg-black rounded-md opacity-25 z-0 transform duration-200"></div>
-                        <div className="cursor-pointer absolute top-[43%] left-[43%] hidden group-hover:flex z-10 transform duration-200">
-                          <div className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-full">
-                            <Upload
-                              onClick={handleUpdateMainImage}
-                              color="white"
-                              size={30}
+                      {!mainPreview && (
+                        <div
+                          onClick={handleUpdateMainImage}
+                          className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-white px-5 py-16 text-sm font-medium text-gray-900 hover:bg-gray-50 hover:text-primary-700 cursor-pointer"
+                        >
+                          <div className="flex flex-col items-center">
+                            <span>+ Tải hình lên</span>
+                            <span className="text-xs text-gray-500">
+                              hoặc kéo thả file vào đây
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        ref={mainImageInputRef}
+                        onChange={handleMainImageChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      {mainPreview && (
+                        <div className="mt-2">
+                          <div className="relative group w-full h-80">
+                            <div className="absolute top-0 left-0 right-0 bottom-0 group-hover:bg-black rounded-md opacity-25 z-0 transform duration-200"></div>
+                            <div className="cursor-pointer absolute top-[43%] left-[43%] hidden group-hover:flex z-10 transform duration-200">
+                              <div className="bg-indigo-600 hover:bg-indigo-700 p-2 rounded-full">
+                                <Upload
+                                  onClick={handleUpdateMainImage}
+                                  color="white"
+                                  size={30}
+                                />
+                              </div>
+                            </div>
+                            <Image
+                              src={mainPreview}
+                              alt="main-preview"
+                              className="w-full h-full object-cover rounded-md mt-2 border border-gray-200"
+                              width={1000}
+                              height={1000}
                             />
                           </div>
                         </div>
-                        <Image
-                          src={mainPreview}
-                          alt="main-preview"
-                          className="w-full h-full object-cover rounded-md mt-2 border border-gray-200"
-                          width={1000}
-                          height={1000}
-                        />
-                      </div>
+                      )}
                     </div>
-                  )}
+                  </div>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
+                  <Label htmlFor="description" className="text-[14.5px]">
+                    Tên bài đọc
+                  </Label>
+                  <div className="w-full grid items-center gap-4">
+                    <textarea
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Tên bài đọc"
+                      className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
+                    ></textarea>
+                  </div>
+                  <Label htmlFor={`time`} className="text-[14.5px]">
+                    Thời gian làm bài
+                  </Label>
+                  <div className="w-full grid items-center gap-4 mt-1">
+                    <input
+                      id={`time`}
+                      value={time}
+                      type="number"
+                      min={0}
+                      max={60}
+                      onChange={(e) => setTime(Number(e.target.value))}
+                      placeholder="Thời gian làm bài"
+                      className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <ModalUpdateReadingDetail
+                      parts={parts}
+                      onPartsUpdate={handlePartsUpdate}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="col-span-2">
-            <div className="flex flex-col justify-start items-start gap-2 overflow-y-auto max-h-[70vh] pr-0 scroll-bar-style">
-              <Label htmlFor="description" className="text-[14.5px]">
-                Tên bài đọc
-              </Label>
-              <div className="w-full grid items-center gap-4">
-                <textarea
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Tên bài đọc"
-                  className="col-span-3 p-2 border border-[#CFCFCF] placeholder-custom rounded"
-                ></textarea>
-              </div>
-              <Label htmlFor={`time`} className="text-[14.5px]">
-                Thời gian làm bài
-              </Label>
-              <div className="w-full grid items-center gap-4 mt-1">
-                <input
-                  id={`time`}
-                  value={time}
-                  type="number"
-                  min={0}
-                  max={60}
-                  onChange={(e) => setTime(Number(e.target.value))}
-                  placeholder="Thời gian làm bài"
-                  className="col-span-3 p-2 border border-[#CFCFCF] rounded placeholder-custom focus:border-gray-500"
-                />
-              </div>
-              <div className="mt-2">
-                <ModalUpdateReadingDetail
-                  parts={parts}
-                  onPartsUpdate={handlePartsUpdate}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        <DialogFooter className="w-full flex !flex-row !justify-between !items-center">
-          <Button
-            onClick={handleDelete}
-            type="submit"
-            className="!px-8 !text-[16px] text-red-600 bg-white border-2 border-red-600 hover:bg-red-600 hover:text-white"
-          >
-            <Trash2 />
-            Xoá
-            {isLoadingForDelete && (
-              <Loader className="animate-spin" size={48} />
-            )}
-          </Button>
-          <div className="flex gap-2">
-            <DialogClose asChild>
+            <DialogFooter className="w-full flex !flex-row !justify-between !items-center">
               <Button
-                type="button"
-                variant="secondary"
-                className="!px-10 !text-[16px]"
+                onClick={handleDelete}
+                type="submit"
+                className="!px-8 !text-[16px] text-red-600 bg-white border-2 border-red-600 hover:bg-red-600 hover:text-white"
+                disabled={isLoadingForDelete || isLoading}
               >
-                Huỷ
+                <Trash2 />
+                Xoá
+                {isLoadingForDelete && (
+                  <Loader className="animate-spin ml-2" size={16} />
+                )}
               </Button>
-            </DialogClose>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center"
-            >
-              Cập nhật bài đọc
-              {isLoading && <Loader className="animate-spin" size={17} />}
-            </button>
-          </div>
-        </DialogFooter>
+              <div className="flex gap-2">
+                <DialogClose asChild>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="!px-10 !text-[16px]"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Huỷ
+                  </Button>
+                </DialogClose>
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={isLoading || isLoadingDetails}
+                  className="flex flex-row justify-center items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-md text-sm !px-10 !text-[16px] py-2.5 text-center disabled:bg-gray-400"
+                >
+                  Cập nhật bài đọc
+                  {isLoading && <Loader className="animate-spin" size={17} />}
+                </button>
+              </div>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

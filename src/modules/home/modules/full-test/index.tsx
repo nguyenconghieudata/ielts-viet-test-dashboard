@@ -114,9 +114,9 @@ export default function FullTest() {
                       <th scope="col" className="w-80 px-4 py-3">
                         Description
                       </th>
-                      <th scope="col" className="w-32 px-4 py-3">
+                      {/* <th scope="col" className="w-32 px-4 py-3">
                         Đã làm
-                      </th>
+                      </th> */}
                       <th scope="col" className="w-24 px-4 py-3">
                         Chi tiết
                       </th>
@@ -143,9 +143,9 @@ export default function FullTest() {
                         <td className="w-80 px-3 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {item?.description.slice(0, 85)}...
                         </td>
-                        <td className="w-32 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        {/* <td className="w-32 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
-                        </td>
+                        </td> */}
                         <td
                           className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white"
                           onClick={() => console.log("ITEM", item)}

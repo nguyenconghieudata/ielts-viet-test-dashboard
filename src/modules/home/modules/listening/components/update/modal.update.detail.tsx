@@ -686,7 +686,7 @@ export function ModalUpdateListeningDetail({
                   <Label className="text-[14.5px] mb-2 block">
                     Audio for Passage {activePart}
                   </Label>
-                  <div className="flex flex-col gap-4">
+                  <div id="listening-update" className="flex flex-col gap-4">
                     {currentPart?.audio ? (
                       <div className="flex flex-col gap-2">
                         <audio

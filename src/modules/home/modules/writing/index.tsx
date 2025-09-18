@@ -117,9 +117,9 @@ export default function Writing() {
                       <th scope="col" className="w-32 px-4 py-3">
                         Thời gian làm bài
                       </th>
-                      <th scope="col" className="w-32 px-4 py-3">
+                      {/* <th scope="col" className="w-32 px-4 py-3">
                         Đã làm
-                      </th>
+                      </th> */}
                       <th scope="col" className="w-24 px-4 py-3">
                         Chi tiết
                       </th>
@@ -149,9 +149,9 @@ export default function Writing() {
                         <td className="w-32 px-14 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           {item.time} phút
                         </td>
-                        <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        {/* <td className="w-24 text-[14px] px-9 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           0
-                        </td>
+                        </td> */}
                         <td className="w-24 text-[14px] px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                           <ModalUpdateWriting data={item} />
                         </td>

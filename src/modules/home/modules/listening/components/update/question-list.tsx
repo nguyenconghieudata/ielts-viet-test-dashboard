@@ -47,6 +47,10 @@ export function QuestionList({
     }
   };
 
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <>
       {questions.length > 0 && (
@@ -66,7 +70,7 @@ export function QuestionList({
                     <button
                       onClick={() => {
                         onEdit(index);
-                        console.log("Edit question at index:", index);
+                        scrollToSection("listening-update");
                       }}
                       className="text-indigo-600 hover:text-indigo-800 font-medium"
                     >
