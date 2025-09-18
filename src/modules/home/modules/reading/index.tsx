@@ -66,7 +66,20 @@ export default function Reading() {
     const filteredData = rawData.filter(
       (item: any) => item.thumbnail !== "" && !item.deleted_at
     );
-    setData(filteredData);
+    const sortedData = filteredData.sort((a: any, b: any) => {
+      const getLastTwoDigits = (name: string): number => {
+        // Tìm 2 chữ số cuối trong tên
+        const match = name.match(/(\d{1,2})$/);
+        return match ? parseInt(match[1], 10) : 0;
+      };
+
+      const aLastDigits = getLastTwoDigits(a.name || "");
+      const bLastDigits = getLastTwoDigits(b.name || "");
+
+      return aLastDigits - bLastDigits;
+    });
+
+    setData(sortedData);
     setTotalPage(Math.ceil(filteredData.length / COUNT));
     setCurrenPage(1);
     setCurrenData(filteredData.slice(0, COUNT));
