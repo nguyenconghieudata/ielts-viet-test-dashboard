@@ -447,14 +447,7 @@ export default function Listening() {
               aiGeneratedData={aiGeneratedData}
               aiFormattedOutput={aiFormattedOutput}
             />
-            <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
-              {/* <button
-                type="button"
-                onClick={sortDataByName}
-                className="flex items-center justify-center text-white bg-indigo-600 hover:bg-indigo-700 font-medium rounded-lg text-md px-5 py-2 text-center"
-              >
-                Sắp xếp theo tên {sortOrder === "asc" ? "↑" : "↓"}
-              </button> */}
+            {/* <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
               <button
                 type="button"
                 onClick={handleUploadFile}
@@ -479,7 +472,7 @@ export default function Listening() {
                 className="hidden"
                 accept=""
               />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">

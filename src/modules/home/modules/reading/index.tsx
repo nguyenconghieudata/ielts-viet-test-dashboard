@@ -416,7 +416,7 @@ export default function Reading() {
               isOpen={isCreateModalOpen}
               onOpenChange={setIsCreateModalOpen}
             />
-            <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
+            {/* <div className="flex flex-col flex-shrink-0 space-y-3 md:flex-row md:items-center lg:justify-end md:space-y-0 md:space-x-3">
               <button
                 type="button"
                 onClick={handleUploadFile}
@@ -441,7 +441,7 @@ export default function Reading() {
                 className="hidden"
                 accept=""
               />
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="h-[640px] flex flex-col justify-between">
