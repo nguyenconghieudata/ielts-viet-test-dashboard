@@ -127,27 +127,72 @@ export function ModalCreateFullTest() {
 
       if (resR && resR?.data?.length > 0) {
         const filterResR = resR.data.filter(
-          (item: any) => item.parts && item.parts.length === 3
+          (item: any) =>
+            item.parts && item.parts.length === 3 && item.thumbnail !== ""
         );
-        setReadings(filterResR);
+
+        const sortedData = filterResR.sort((a: any, b: any) => {
+          const getLastTwoDigits = (name: string): number => {
+            // Tìm 2 chữ số cuối trong tên
+            const match = name.match(/(\d{1,2})$/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+
+          const aLastDigits = getLastTwoDigits(a.name || "");
+          const bLastDigits = getLastTwoDigits(b.name || "");
+
+          return aLastDigits - bLastDigits;
+        });
+
+        setReadings(sortedData);
       } else {
         setReadings([]);
       }
 
       if (resL && resL?.data?.length > 0) {
         const filterResL = resL.data.filter(
-          (item: any) => item.parts && item.parts.length === 4
+          (item: any) =>
+            item.parts && item.parts.length === 4 && item.thumbnail !== ""
         );
-        setListenings(filterResL);
+
+        const sortedData = filterResL.sort((a: any, b: any) => {
+          const getLastTwoDigits = (name: string): number => {
+            // Tìm 2 chữ số cuối trong tên
+            const match = name.match(/(\d{1,2})$/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+
+          const aLastDigits = getLastTwoDigits(a.name || "");
+          const bLastDigits = getLastTwoDigits(b.name || "");
+
+          return aLastDigits - bLastDigits;
+        });
+
+        setListenings(sortedData);
       } else {
         setListenings([]);
       }
 
       if (resW && resW?.data?.length > 0) {
         const filterResW = resW.data.filter(
-          (item: any) => item.parts && item.parts.length === 2
+          (item: any) =>
+            item.parts && item.parts.length === 2 && item.thumbnail !== ""
         );
-        setWritings(filterResW);
+
+        const sortedData = filterResW.sort((a: any, b: any) => {
+          const getLastTwoDigits = (name: string): number => {
+            // Tìm 2 chữ số cuối trong tên
+            const match = name.match(/(\d{1,2})$/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+
+          const aLastDigits = getLastTwoDigits(a.name || "");
+          const bLastDigits = getLastTwoDigits(b.name || "");
+
+          return aLastDigits - bLastDigits;
+        });
+
+        setWritings(sortedData);
       } else {
         setWritings([]);
       }
@@ -373,8 +418,6 @@ export function ModalCreateFullTest() {
             parts: writingParts,
           };
 
-          console.log("check writing data: ", writingTestData);
-
           // Construct writingSubmitFormat
           const writingPartsFormatted = writingParts.map(
             (partResponse, index) => {
@@ -390,8 +433,6 @@ export function ModalCreateFullTest() {
             }
           );
 
-          // console.log("check writing data 2----: ", writingPartsFormatted);
-
           const test = {
             skill: "W",
             parts:
@@ -400,7 +441,7 @@ export function ModalCreateFullTest() {
             time: resW.time || 60,
           };
 
-          // console.log("check writing data 3----: ", test);
+          console.log("check writing data 3----: ", test);
 
           setWritingSubmitFormat({
             skill: "W",
@@ -621,13 +662,9 @@ export function ModalCreateFullTest() {
         };
       };
 
-      console.log("check writing test: ", writingSubmitFormat);
-
       const processedReadingFormat = processTestData(readingSubmitFormat);
       const processedListeningFormat = processTestData(listeningSubmitFormat);
       const processedWritingFormat = processTestData(writingSubmitFormat);
-
-      console.log("check processedWritingFormat: ", processedWritingFormat);
 
       const body = {
         name,
@@ -642,11 +679,7 @@ export function ModalCreateFullTest() {
         ],
       };
 
-      // console.log("BODY", JSON.stringify(body));
-
       const response = await FullTestService.createFullTest(body);
-
-      console.log("check response: ", response);
 
       if (response) {
         toast({

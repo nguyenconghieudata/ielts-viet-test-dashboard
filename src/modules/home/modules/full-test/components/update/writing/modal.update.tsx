@@ -124,13 +124,13 @@ export function ModalUpdateWriting({
   };
 
   const validateForm = () => {
-    if (!mainPreview) {
-      toast({
-        variant: "destructive",
-        title: "Vui lòng chọn ảnh chính.",
-      });
-      return false;
-    }
+    // if (!mainPreview) {
+    //   toast({
+    //     variant: "destructive",
+    //     title: "Vui lòng chọn ảnh chính.",
+    //   });
+    //   return false;
+    // }
 
     if (!name.trim()) {
       toast({

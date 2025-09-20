@@ -175,7 +175,6 @@ export default function Listening() {
         }
       }
 
-      console.log("Formatted AI data:", formattedData);
       return formattedData;
     } catch (error) {
       console.error("Error parsing AI response:", error);

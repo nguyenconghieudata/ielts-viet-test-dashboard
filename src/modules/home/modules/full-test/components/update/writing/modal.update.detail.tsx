@@ -82,13 +82,6 @@ export function ModalUpdateWritingDetail({
           : part
       );
 
-      console.log("check parts:", parts);
-
-      console.log("Updated parts ========:", updatedParts);
-
-      console.log("image 1 preview:", image1Preview);
-      console.log("image 2 preview:", image2Preview);
-
       onPartsUpdate(updatedParts);
     },
     [activePart, parts, onPartsUpdate]
