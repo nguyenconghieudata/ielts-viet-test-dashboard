@@ -365,18 +365,20 @@ export function ModalUpdateFullTest({
   };
 
   const updateDOMReading = async (readingData: ReadingData) => {
-    if (!readingData || !readingData.parts) {
+    if (!readingData || !readingData.parts || readingData.parts.length === 0) {
       setReadingUpdateData(null);
       return;
     }
     try {
-      const [readingParts1, readingParts2, readingParts3] = await Promise.all([
-        QuestionsService.getQuestionsById(readingData.parts[0]),
-        QuestionsService.getQuestionsById(readingData.parts[1]),
-        QuestionsService.getQuestionsById(readingData.parts[2]),
-      ]);
+      // Fetch questions for all available parts dynamically
+      const readingParts = await Promise.all(
+        readingData.parts.map((partId) =>
+          QuestionsService.getQuestionsById(partId)
+        )
+      );
 
-      if (!readingParts1 || !readingParts2 || !readingParts3) {
+      // Validate fetched data
+      if (readingParts.some((part) => !part)) {
         throw new Error("Failed to fetch one or more reading parts.");
       }
 
@@ -400,35 +402,16 @@ export function ModalUpdateFullTest({
         });
       };
 
-      const updatedParts = [
-        {
-          _id: readingParts1._id || "",
-          image: readingParts1.image || "",
-          content: readingParts1.content || "",
-          part_num: 1,
-          question: processQuestions(readingParts1.question || []),
-          tempQuestions: processQuestions(readingParts1.question || []),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts2._id || "",
-          image: readingParts2.image || "",
-          content: readingParts2.content || "",
-          part_num: 2,
-          question: processQuestions(readingParts2.question || []),
-          tempQuestions: processQuestions(readingParts2.question || []),
-          selectedQuestionType: null,
-        },
-        {
-          _id: readingParts3._id || "",
-          image: readingParts3.image || "",
-          content: readingParts3.content || "",
-          part_num: 3,
-          question: processQuestions(readingParts3.question || []),
-          tempQuestions: processQuestions(readingParts3.question || []),
-          selectedQuestionType: null,
-        },
-      ];
+      // Create parts dynamically based on available data
+      const updatedParts = readingParts.map((part, index) => ({
+        _id: part._id || "",
+        image: part.image || "",
+        content: part.content || "",
+        part_num: index + 1,
+        question: processQuestions(part.question || []),
+        tempQuestions: processQuestions(part.question || []),
+        selectedQuestionType: null,
+      }));
 
       // Transform questions for each part
       const transformedParts = updatedParts.map((part) => ({
@@ -484,32 +467,25 @@ export function ModalUpdateFullTest({
   };
 
   const updateDOMListening = async (listeningData: ListeningData) => {
-    if (!listeningData || !listeningData.parts) {
+    if (
+      !listeningData ||
+      !listeningData.parts ||
+      listeningData.parts.length === 0
+    ) {
       setListeningUpdateData(null);
       return;
     }
 
     try {
-      // Fetch questions for each part concurrently
-      const [
-        listeningParts1,
-        listeningParts2,
-        listeningParts3,
-        listeningParts4,
-      ] = await Promise.all([
-        QuestionsService.getQuestionsById(listeningData.parts[0]),
-        QuestionsService.getQuestionsById(listeningData.parts[1]),
-        QuestionsService.getQuestionsById(listeningData.parts[2]),
-        QuestionsService.getQuestionsById(listeningData.parts[3]),
-      ]);
+      // Fetch questions for all available parts dynamically
+      const listeningParts = await Promise.all(
+        listeningData.parts.map((partId) =>
+          QuestionsService.getQuestionsById(partId)
+        )
+      );
 
       // Validate fetched data
-      if (
-        !listeningParts1 ||
-        !listeningParts2 ||
-        !listeningParts3 ||
-        !listeningParts4
-      ) {
+      if (listeningParts.some((part) => !part)) {
         throw new Error("Failed to fetch one or more listening parts.");
       }
 
@@ -533,45 +509,16 @@ export function ModalUpdateFullTest({
         });
       };
 
-      // Transform parts data
-      const updatedParts = [
-        {
-          _id: listeningParts1._id || "",
-          image: listeningParts1.image || "",
-          audio: listeningParts1.audio || "",
-          part_num: 1,
-          question: processQuestions(listeningParts1.question || []),
-          tempQuestions: processQuestions(listeningParts1.question || []),
-          selectedQuestionType: null,
-        },
-        {
-          _id: listeningParts2._id || "",
-          image: listeningParts2.image || "",
-          audio: listeningParts2.audio || "",
-          part_num: 2,
-          question: processQuestions(listeningParts2.question || []),
-          tempQuestions: processQuestions(listeningParts2.question || []),
-          selectedQuestionType: null,
-        },
-        {
-          _id: listeningParts3._id || "",
-          image: listeningParts3.image || "",
-          audio: listeningParts3.audio || "",
-          part_num: 3,
-          question: processQuestions(listeningParts3.question || []),
-          tempQuestions: processQuestions(listeningParts3.question || []),
-          selectedQuestionType: null,
-        },
-        {
-          _id: listeningParts4._id || "",
-          image: listeningParts4.image || "",
-          audio: listeningParts4.audio || "",
-          part_num: 4,
-          question: processQuestions(listeningParts4.question || []),
-          tempQuestions: processQuestions(listeningParts4.question || []),
-          selectedQuestionType: null,
-        },
-      ];
+      // Create parts dynamically based on available data
+      const updatedParts = listeningParts.map((part, index) => ({
+        _id: part._id || "",
+        image: part.image || "",
+        audio: part.audio || "",
+        part_num: index + 1,
+        question: processQuestions(part.question || []),
+        tempQuestions: processQuestions(part.question || []),
+        selectedQuestionType: null,
+      }));
 
       // Transform questions for each part
       const transformedParts = updatedParts.map((part) => ({
@@ -627,47 +574,33 @@ export function ModalUpdateFullTest({
   };
 
   const updateDOMWriting = async (writingData: WritingData) => {
-    if (!writingData || !writingData.parts) {
+    if (!writingData || !writingData.parts || writingData.parts.length === 0) {
       setWritingUpdateData(null);
       return;
     }
 
     try {
-      const [writingParts1, writingParts2] = await Promise.all([
-        QuestionsService.getQuestionsById(writingData.parts[0]),
-        QuestionsService.getQuestionsById(writingData.parts[1]),
-      ]);
+      // Fetch questions for all available parts dynamically
+      const writingParts = await Promise.all(
+        writingData.parts.map((partId) =>
+          QuestionsService.getQuestionsById(partId)
+        )
+      );
 
-      const updatedParts = [
-        {
-          _id: writingData.parts[0] || "",
-          image: writingParts1.image || "",
-          content:
-            writingParts1.content || writingParts1.question?.[0]?.content || "",
-          part_num: 1,
-          questions: (writingParts1.question || []).map((q: any) => ({
-            _id: q._id || "",
-            q_type: "W" as const,
-            image: q.image || "",
-            topic: q.topic || "",
-          })),
-          tempQuestions: [],
-        },
-        {
-          _id: writingData.parts[1] || "",
-          image: writingParts2.image || "",
-          content:
-            writingParts2.content || writingParts2.question?.[0]?.content || "",
-          part_num: 2,
-          questions: (writingParts2.question || []).map((q: any) => ({
-            _id: q._id || "",
-            q_type: "W" as const,
-            image: q.image,
-            topic: q.topic || "",
-          })),
-          tempQuestions: [],
-        },
-      ];
+      // Create parts dynamically based on available data
+      const updatedParts = writingParts.map((part, index) => ({
+        _id: writingData.parts[index] || "",
+        image: part.image || "",
+        content: part.content || part.question?.[0]?.content || "",
+        part_num: index + 1,
+        questions: (part.question || []).map((q: any) => ({
+          _id: q._id || "",
+          q_type: "W" as const,
+          image: q.image || "",
+          topic: q.topic || "",
+        })),
+        tempQuestions: [],
+      }));
 
       const transformedParts = await Promise.all(
         updatedParts.map(async (part) => {
